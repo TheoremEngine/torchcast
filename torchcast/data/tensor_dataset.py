@@ -16,7 +16,7 @@ class TensorSeriesDataset(SeriesDataset):
     @staticmethod
     def _coerce_inputs(*series):
         # Coerce to torch.Tensor
-        series = [torch.tensor(x) for x in series]
+        series = [torch.as_tensor(x) for x in series]
         # Track original shape so it can be properly reported in error messages
         # if necessary
         shapes = [x.shape for x in series]
