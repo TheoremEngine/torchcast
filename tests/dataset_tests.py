@@ -34,6 +34,9 @@ class AirQualityTest(unittest.TestCase):
                 (ds.series[0][0, 1:, -1][i_real] == row_last[i_real]).all()
             )
 
+            self.assertEqual(ds.channel_names[0], 'CO(GT)')
+            self.assertEqual(ds.series_names, None)
+
 
 class NEONAquaticTest(unittest.TestCase):
     def test_full_up(self):
@@ -55,6 +58,12 @@ class NEONAquaticTest(unittest.TestCase):
             self.assertTrue(isnan(ds.series[1][0, 0, 0]))
             self.assertTrue(isnan(ds.series[1][0, 1, 0]))
             self.assertTrue(abs(ds.series[1][0, 2, 0] - 3.40215339) < 1e-5)
+
+            self.assertEqual(
+                ds.channel_names, ['temperature', 'chla', 'oxygen']
+            )
+            self.assertEqual(len(ds.series_names), 34)
+            self.assertEqual(ds.series_names[0], 'ARIK')
 
 
 class UtilsTests(unittest.TestCase):

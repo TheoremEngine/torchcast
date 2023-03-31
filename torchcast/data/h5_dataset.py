@@ -15,7 +15,8 @@ class H5SeriesDataset(SeriesDataset):
     def __init__(self, path: str, keys: Union[List[str], str],
                  return_length: Optional[int] = None,
                  transform: Optional[Callable] = None,
-                 channel_names: Optional[Iterator[str]] = None):
+                 channel_names: Optional[Iterator[str]] = None,
+                 series_names: Optional[Iterator[str]] = None):
         '''
         Args:
             path (str): Path to the HDF5 file.
@@ -26,6 +27,8 @@ class H5SeriesDataset(SeriesDataset):
             before returning.
             channel_names (optional, iterator of str): If provided, the names
             of the channels.
+            series_names (optional, iterator of str): If provided, the names of
+            the series.
         '''
         self.h5_file = h5py.File(path, 'r')
 
@@ -40,6 +43,7 @@ class H5SeriesDataset(SeriesDataset):
             return_length=return_length,
             transform=transform,
             channel_names=channel_names,
+            series_names=series_names,
         )
 
     @staticmethod

@@ -96,6 +96,9 @@ class NEONAquaticDataset(TensorSeriesDataset):
         )
 
         super().__init__(
-            dates, buff, return_length=return_length, transform=transform,
-            channel_names=NEON_AQUATIC_KEYS
+            dates, buff,
+            return_length=return_length,
+            transform=transform,
+            channel_names=NEON_AQUATIC_KEYS,
+            series_names=ordered_sites,
         )

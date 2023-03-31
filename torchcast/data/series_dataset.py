@@ -9,7 +9,8 @@ __all__ = ['SeriesDataset']
 class SeriesDataset(torch.utils.data.Dataset):
     def __init__(self, *series, return_length: Optional[int] = None,
                  transform: Optional[Callable] = None,
-                 channel_names: Optional[Iterator[str]] = None):
+                 channel_names: Optional[Iterator[str]] = None,
+                 series_names: Optional[Iterator[str]] = None):
         '''
         Args:
             series: The objects storing the underlying time series. The type
@@ -20,11 +21,14 @@ class SeriesDataset(torch.utils.data.Dataset):
             sequence to return. If not provided, returns an entire sequence.
             channel_names (optional, iterator of str): If provided, the names
             of the channels.
+            series_names (optional, iterator of str): If provided, the names of
+            the series.
         '''
         self.series = self._coerce_inputs(*series)
         self.transform = transform
         self.return_length = return_length
         self.channel_names = channel_names
+        self.series_names = series_names
 
         n, t = self._get_storage_shape()
         self._time_range = (0, t)
