@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Iterator, List, Optional, Tuple, Union
 
 import torch
 
@@ -7,8 +7,9 @@ __all__ = ['SeriesDataset']
 
 
 class SeriesDataset(torch.utils.data.Dataset):
-    def __init__(self, *series, transform: Optional[Callable] = None,
-                 return_length: Optional[int] = None):
+    def __init__(self, *series, return_length: Optional[int] = None,
+                 transform: Optional[Callable] = None,
+                 channel_names: Optional[Iterator[str]] = None):
         '''
         Args:
             series: The objects storing the underlying time series. The type
@@ -17,10 +18,13 @@ class SeriesDataset(torch.utils.data.Dataset):
             before returning.
             return_length (optional, int): If provided, the length of the
             sequence to return. If not provided, returns an entire sequence.
+            channel_names (optional, iterator of str): If provided, the names
+            of the channels.
         '''
         self.series = self._coerce_inputs(*series)
         self.transform = transform
         self.return_length = return_length
+        self.channel_names = channel_names
 
         n, t = self._get_storage_shape()
         self._time_range = (0, t)

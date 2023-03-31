@@ -1,10 +1,11 @@
 import csv
+import gzip
+from io import BytesIO
 import lzma
 import os
 import re
 import tarfile
 from typing import Dict, List, Optional
-import urllib
 import zipfile
 
 import numpy as np
@@ -17,19 +18,77 @@ __all__ = ['load_ts_file']
 _GOOGLE_URL = 'https://drive.google.com/uc?id={doc_id}'
 
 
-def _fetch_from_google_drive(root_path: Optional[str], doc_id: str):
+def _download_and_extract(url: str, local_path: str,
+                          file_name: Optional[str] = None) -> str:
     '''
-    Downloads a file from Google drive.
+    Convenience function to download a remote file, decompress it if necessary,
+    and write it to disk.
 
     Args:
-        root_path (optional, str): The path of the directory to download the
-        file to. If this is None, then use the environment variable
-        TORCHCAST_DATASETS. If that's not set either, default to './data'.
+        url (str): The URL to download the data from.
+        local_path (str): The local path to put the extracted data in.
+        file_name (optional, str): If provided, only extract this file from the
+        downloaded archive.
+
+    Returns:
+        The path to the file written to disk.
+    '''
+    # First, infer whether local_path is a directory or the path of the file.
+    # Make sure target location exists.
+    if file_name is not None:
+        if local_path.endswith(file_name):
+            local_root = os.path.dirname(local_path)
+        else:
+            local_root = local_path
+            local_path = os.path.join(local_path, file_name)
+    else:
+        local_root = local_path
+
+    os.makedirs(local_root, exist_ok=True)
+
+    # Let's get that file!
+    buff = _fetch_from_remote(url)
+
+    # Extract, if needed.
+    while True:
+        url, ext = os.path.splitext(url.lower())
+
+        if ext == '.gz':
+            buff = BytesIO(gzip.decompress(buff.read()))
+        elif ext == '.xz':
+            buff = BytesIO(lzma.decompress(buff.read()))
+        elif ext == '.tar':
+            with tarfile.TarFile(fileobj=buff, mode='r') as tar_file:
+                if file_name is None:
+                    tar_file.extractall(local_root)
+                else:
+                    tar_file.extract(file_name, path=local_root)
+                return local_path
+        elif ext == '.zip':
+            with zipfile.ZipFile(buff) as zip_file:
+                if file_name is None:
+                    zip_file.extractall(local_root)
+                else:
+                    zip_file.extract(file_name, path=local_root)
+                return local_path
+        else:
+            if file_name is None:
+                file_name = os.path.basename(url + ext)
+            if not local_path.endswith(file_name):
+                local_path = os.path.join(local_root, file_name)
+            with open(local_path, 'wb') as out_file:
+                out_file.write(buff.read())
+            return local_path
+
+
+def _fetch_from_google_drive(doc_id: str) -> BytesIO:
+    '''
+    Downloads a file from Google drive and returns as an in-memory buffer.
+
+    Args:
         doc_id (str): Identifier for the file on Google drive.
     '''
     # Check if it's already downloaded.
-    root_path = root_path or os.getenv('TORCHCAST_DATASETS', './data')
-    os.makedirs(root_path, exist_ok=True)
     url = _GOOGLE_URL.format(doc_id=doc_id)
     session = requests.session()
 
@@ -46,57 +105,38 @@ def _fetch_from_google_drive(root_path: Optional[str], doc_id: str):
         url = search.groups()[0].replace('&amp;', '&')
         r.close()
 
-    content_disp = urllib.parse.unquote(r.headers['Content-Disposition'])
-    m = re.search(r"filename\*=UTF-8''(.*)", content_disp).groups()[0]
-    name = m.replace(os.path.sep, '_')
+    buff = BytesIO()
 
-    # Check if it's already downloaded
-    if os.path.exists(root_path) and (os.path.basename(root_path) == name):
-        return root_path
-    local_path = os.path.join(root_path, name)
-    if os.path.exists(local_path):
-        return local_path
-
-    with open(local_path, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=8192):
-            f.write(chunk)
+    for chunk in r.iter_content(chunk_size=8192):
+        buff.write(chunk)
 
     r.close()
+    buff.seek(0)
+
+    return buff
 
 
-def _fetch_to_local(path: str, url: str) -> str:
+def _fetch_from_remote(url: str) -> BytesIO:
     '''
-    Retrieves a file from a URL and downloads it to a local path, returning the
-    local path.
+    Retrieves a file from a URL and downloads it, returning it as an in-memory
+    buffer.
 
     Args:
-        path (str): The path to download the file to.
         url (str): URL to download.
-
-    Returns:
-        The path to the now-downloaded file.
     '''
-    name = os.path.basename(url)
-
-    # Coerce path to point to the target FILE, not the target DIRECTORY.
-    if os.path.basename(path) != name:
-        path = os.path.join(path, name)
-    # If it's already present, we're done.
-    if os.path.exists(path):
-        return path
-    # Make sure the target directory exists.
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    buff = BytesIO()
 
     # Syntax is taken from:
     # https://stackoverflow.com/questions/16694907/download-large-file-in- \
     #     python-with-requests
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
-        with open(path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+        for chunk in r.iter_content(chunk_size=8192):
+            buff.write(chunk)
 
-    return path
+    buff.seek(0)
+
+    return buff
 
 
 def _load_csv_file(path: str, delimiter: str = ',') -> Dict[str, List]:
@@ -131,52 +171,6 @@ def _stack_mismatched_tensors(tensors: List[torch.Tensor]) -> torch.Tensor:
         out[i, :tensor.shape[0], :tensor.shape[1]] = tensor
 
     return out
-
-
-def _unzip_archive(path: str, out_path: Optional[str] = None,
-                   file_name: Optional[str] = None):
-    '''
-    Unzips an archive file.
-
-    Args:
-        path (str): Path to file to extract.
-        out_path (optional, str): Directory to place extracted files; defaults
-        to the directory containing the archive file.
-        file_name (optional, str): If provided, only extract this file, not all
-        files.
-    '''
-    if not os.path.exists(path):
-        raise FileNotFoundError(path)
-
-    if out_path is None:
-        out_path = os.path.dirname(path)
-    elif (file_name is not None) and (os.path.basename(out_path) == file_name):
-        out_path = os.path.dirname(out_path)
-
-    os.makedirs(out_path, exist_ok=True)
-
-    def _extract(extractor):
-        if file_name is None:
-            extractor.extractall(out_path)
-        else:
-            # path needs to be a directory
-            extractor.extract(file_name, path=out_path)
-
-    if path.lower().endswith('.zip'):
-        with zipfile.ZipFile(path, 'r') as zip_file:
-            _extract(zip_file)
-    elif path.lower().endswith('.tar'):
-        with tarfile.open(path, 'r') as tar_file:
-            _extract(tar_file)
-    elif path.lower().endswith('.tar.gz'):
-        with tarfile.open(path, 'r:gz') as tar_file:
-            _extract(tar_file)
-    elif path.lower().endswith('.tar.xz'):
-        with lzma.open(path, 'rb') as xz_file:
-            with tarfile.TarFile(fileobj=xz_file, mode='r') as tar_file:
-                _extract(tar_file)
-    else:
-        raise ValueError(f'Do not understand how to extract {path}')
 
 
 def load_ts_file(series_file: str) -> torch.Tensor:

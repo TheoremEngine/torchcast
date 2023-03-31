@@ -1,12 +1,11 @@
 from datetime import datetime
 import os
-import tempfile
 from typing import Callable, Optional
 
 import torch
 
 from ..data import TensorSeriesDataset
-from .utils import _fetch_to_local, _load_csv_file, _unzip_archive
+from .utils import _download_and_extract, _load_csv_file
 
 __all__ = ['AirQualityDataset']
 
@@ -39,16 +38,11 @@ class AirQualityDataset(TensorSeriesDataset):
         '''
         if os.path.isdir(path):
             path = os.path.join(path, AIR_QUALITY_FILE_NAME)
-
         if not os.path.exists(path):
             if download:
-                # TODO: This could all be done in memory, without the temporary
-                # disk storage.
-                with tempfile.TemporaryDirectory() as temp_root:
-                    zip_path = _fetch_to_local(temp_root, AIR_QUALITY_URL)
-                    _unzip_archive(
-                        zip_path, path, file_name=AIR_QUALITY_FILE_NAME
-                    )
+                path = _download_and_extract(
+                    AIR_QUALITY_URL, path, file_name=AIR_QUALITY_FILE_NAME
+                )
             else:
                 raise FileNotFoundError(
                     f'Air Quality dataset not found at: {path}'
@@ -81,5 +75,6 @@ class AirQualityDataset(TensorSeriesDataset):
         super().__init__(
             data,
             transform=transform,
-            return_length=return_length
+            return_length=return_length,
+            channel_names=AIR_QUALITY_KEYS,
         )
