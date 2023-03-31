@@ -38,8 +38,8 @@ class AirQualityTest(unittest.TestCase):
             self.assertEqual(ds.series_names, None)
 
 
-class NEONAquaticTest(unittest.TestCase):
-    def test_full_up(self):
+class NEONTests(unittest.TestCase):
+    def test_aquatic_full_up(self):
         with tempfile.TemporaryDirectory() as temp_root:
             with self.assertRaises(FileNotFoundError):
                 ds = tc.datasets.NEONAquaticDataset(temp_root, download=False)
@@ -64,6 +64,31 @@ class NEONAquaticTest(unittest.TestCase):
             )
             self.assertEqual(len(ds.series_names), 34)
             self.assertEqual(ds.series_names[0], 'ARIK')
+
+    def test_terrestrial_full_up(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            with self.assertRaises(FileNotFoundError):
+                ds = tc.datasets.NEONTerrestrialDataset(
+                    temp_root, download=False
+                )
+            ds = tc.datasets.NEONTerrestrialDataset(temp_root, download=True)
+            ds = tc.datasets.NEONTerrestrialDataset(temp_root, download=False)
+
+            self.assertEqual(len(ds.series), 2)
+
+            self.assertEqual(ds.series[0].shape[:2], (47, 1))
+            dates = ds.series[0]
+            self.assertTrue(
+                torch.isclose(dates[..., 1:8] + 1, dates[..., 2:9]).all()
+            )
+
+            self.assertEqual(ds.series[1].shape[:2], (47, 2))
+            self.assertTrue(abs(ds.series[1][2, 0, 0] - 2.70877195) < 1e-5)
+            self.assertTrue(abs(ds.series[1][2, 1, 0] - 0.58013679) < 1e-5)
+
+            self.assertEqual(ds.channel_names, ['le', 'nee'])
+            self.assertEqual(len(ds.series_names), 47)
+            self.assertEqual(ds.series_names[0], 'ABBY')
 
 
 class UtilsTests(unittest.TestCase):
