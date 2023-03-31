@@ -1,4 +1,6 @@
+import csv
 from math import isnan
+import os
 import tempfile
 import unittest
 
@@ -53,6 +55,41 @@ class NEONAquaticTest(unittest.TestCase):
             self.assertTrue(isnan(ds.series[1][0, 0, 0]))
             self.assertTrue(isnan(ds.series[1][0, 1, 0]))
             self.assertTrue(abs(ds.series[1][0, 2, 0] - 3.40215339) < 1e-5)
+
+
+class UtilsTests(unittest.TestCase):
+    def test_load_csv_file(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            temp_path = os.path.join(temp_root, 'test.csv')
+            with open(temp_path, 'w') as test_file:
+                writer = csv.writer(test_file)
+                writer.writerow(['A', 'B', 'C'])
+                writer.writerow([1, 2, 3])
+                writer.writerow([8, 9, 10])
+
+            records = tc.datasets.utils._load_csv_file(temp_path)
+
+            self.assertEqual(records.keys(), {'A', 'B', 'C'})
+            self.assertEqual(records['A'], ('1', '8'))
+            self.assertEqual(records['B'], ('2', '9'))
+            self.assertEqual(records['C'], ('3', '10'))
+
+    def test_stack_mismatched_tensors(self):
+        tensors = [
+            torch.tensor([0., 3., 6.]).reshape(1, 3),
+            torch.tensor([0., 2.]).reshape(1, 2),
+            torch.tensor([[1., 1.], [1., 1.]])
+        ]
+        tensor = tc.datasets.utils._stack_mismatched_tensors(tensors)
+
+        self.assertEqual(tensor.shape, (3, 2, 3))
+        self.assertTrue((tensor[0, 0, :] == tensors[0]).all())
+        self.assertTrue(torch.isnan(tensor[0, 1, :]).all())
+        self.assertTrue((tensor[1, 0, :2] == tensors[1]).all())
+        self.assertTrue(torch.isnan(tensor[1, 0, 2]))
+        self.assertTrue(torch.isnan(tensor[1, 1, :]).all())
+        self.assertTrue((tensor[2, :, :2] == 1).all())
+        self.assertTrue(torch.isnan(tensor[2, :, 2]).all())
 
 
 if __name__ == '__main__':
