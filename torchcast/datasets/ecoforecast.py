@@ -1,15 +1,12 @@
-from datetime import datetime
 import os
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional, Union
 
+import numpy as np
+import pandas as pd
 import torch
 
 from ..data import TensorSeriesDataset
-from .utils import (
-    _download_and_extract,
-    _load_csv_file,
-    _stack_mismatched_tensors
-)
+from .utils import _download_and_extract
 
 __all__ = ['NEONAquaticDataset', 'NEONTerrestrialDataset']
 
@@ -27,7 +24,7 @@ class NEONDataset(TensorSeriesDataset):
     This is a base class for NEON ecoforecast datasets.
     '''
     def __init__(self, path: str, url: str, file_name: str,
-                 channel_names: List[str], download: bool = False,
+                 download: bool = False,
                  transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):
         # Make sure data is in place.
@@ -42,64 +39,54 @@ class NEONDataset(TensorSeriesDataset):
                     f'NEON dataset not found at: {path}'
                 )
 
-        # This will return a dictionary mapping keys to lists
-        data = _load_csv_file(path)
-
+        df = pd.read_csv(path)
         # Remove NaN values
-        data = {
-            k: [x for x, o in zip(vs, data['observation']) if o != 'NA']
-            for k, vs in data.items()
-        }
-
+        df = df.dropna()
         # Convert dates to integers
-        data['datetime'] = [
-            (datetime.strptime(d, '%Y-%m-%d') - datetime.min).days
-            for d in data['datetime']
-        ]
+        df['datetime'] = pd.to_datetime(df.pop('datetime'), format='%Y-%m-%d')
+        # Dates is stored in nanoseconds in pandas, and we want it in days.
+        df['datetime'] = df['datetime'].astype(np.int64)
+        df['datetime'] //= (24 * 60 * 60 * 1_000_000_000)
 
-        # Construct dictionary mapping site_ID to index, and variable to index.
-        sites = sorted(set(data['site_id']))
+        # Construct dictionary mapping site_ID to index, and variable to index,
+        # and apply to the dataframe.
+        sites = list(df['site_id'].unique())
         site_ids = {site: i for i, site in enumerate(sites)}
+        df['site_id'] = df['site_id'].replace(site_ids)
+        channel_names = list(df['variable'].unique())
         var_ids = {k: i for i, k in enumerate(channel_names)}
-
-        # Determine date ranges for each site.
-        site_date_ranges = {
-            site: (min(r for r, s in zip(data['datetime'], data['site_id'])
-                       if s == site),
-                   max(r for r, s in zip(data['datetime'], data['site_id'])
-                       if s == site) + 1)
-            for site in site_ids.keys()
-        }
+        df['variable'] = df['variable'].replace(var_ids)
 
         # Build buffer
-        n_t = max(v[1] - v[0] for v in site_date_ranges.values())
+        site_date_min = df.groupby('site_id')['datetime'].min()
+        site_date_max = df.groupby('site_id')['datetime'].max()
+        n_t = (site_date_max - site_date_min).max() + 1
         buff = torch.full(
-            (len(site_ids), len(channel_names), n_t), float('nan'),
+            (len(sites), len(channel_names), n_t), float('nan'),
             dtype=torch.float32
         )
 
-        # Add data to buffer
-        for i, site in enumerate(data['site_id']):
-            idx_v = var_ids[data['variable'][i]]
-            idx_t = data['datetime'][i] - site_date_ranges[site][0]
-            buff[site_ids[site], idx_v, idx_t] = float(data['observation'][i])
+        # Add data to buffer. We iterate by index instead of by row to preserve
+        # the dtype. TODO: There has to be a better way to do this.
+        for row in df.index:
+            site, col = df['site_id'][row], df['variable'][row]
+            t = df['datetime'][row] - site_date_min[site]
+            buff[site, col, t] = df['observation'][row]
 
-        # Build dates
-        ordered_sites = sorted(site_ids.keys(), key=lambda s: site_ids[s])
-        dates = _stack_mismatched_tensors(
-            [torch.arange(*site_date_ranges[site]).float().unsqueeze(0)
-             for site in ordered_sites],
-        )
+        # Build dates and coerce to NCT arrangement.
+        dates = [
+            torch.arange(site_min, site_min + n_t)
+            for site_min in site_date_min
+        ]
+        dates = torch.stack(dates, dim=0).unsqueeze(1)
 
         super().__init__(
             dates, buff,
             return_length=return_length,
             transform=transform,
             channel_names=channel_names,
-            series_names=ordered_sites,
+            series_names=sites,
         )
-
-        return dates, buff, ordered_sites
 
 
 class NEONAquaticDataset(NEONDataset):
@@ -122,7 +109,6 @@ class NEONAquaticDataset(NEONDataset):
             path,
             url=NEON_AQUATIC_URL,
             file_name=NEON_AQUATIC_FILE_NAME,
-            channel_names=NEON_AQUATIC_KEYS,
             return_length=return_length,
             transform=transform,
             download=download,
@@ -149,7 +135,6 @@ class NEONTerrestrialDataset(NEONDataset):
             path,
             url=NEON_TERRA_URL,
             file_name=NEON_TERRA_FILE_NAME,
-            channel_names=NEON_TERRA_KEYS,
             return_length=return_length,
             transform=transform,
             download=download,

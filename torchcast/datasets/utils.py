@@ -1,11 +1,10 @@
-import csv
 import gzip
 from io import BytesIO
 import lzma
 import os
 import re
 import tarfile
-from typing import Dict, List, Optional
+from typing import List, Optional
 import zipfile
 
 import numpy as np
@@ -137,21 +136,6 @@ def _fetch_from_remote(url: str) -> BytesIO:
     buff.seek(0)
 
     return buff
-
-
-def _load_csv_file(path: str, delimiter: str = ',') -> Dict[str, List]:
-    '''
-    Convenience function for loading a csv file. The file is returned as a
-    dictionary, whose keys are given by the header and whose values are lists
-    giving the contents of the columns.
-
-    Args:
-        path (str): Path to file to load.
-    '''
-    with open(path, 'r') as record_file:
-        records = list(zip(*csv.reader(record_file, delimiter=delimiter)))
-
-    return {r[0]: r[1:] for r in records}
 
 
 def _stack_mismatched_tensors(tensors: List[torch.Tensor]) -> torch.Tensor:

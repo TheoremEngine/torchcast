@@ -1,22 +1,17 @@
-from datetime import datetime
 import os
 from typing import Callable, Optional
 
+import numpy as np
+import pandas as pd
 import torch
 
 from ..data import TensorSeriesDataset
-from .utils import _download_and_extract, _load_csv_file
+from .utils import _download_and_extract
 
 __all__ = ['AirQualityDataset']
 
 AIR_QUALITY_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00360/AirQualityUCI.zip'  # noqa
 AIR_QUALITY_FILE_NAME = 'AirQualityUCI.csv'
-
-AIR_QUALITY_KEYS = [
-    'CO(GT)', 'PT08.S1(CO)', 'NMHC(GT)', 'C6H6(GT)', 'PT08.S2(NMHC)',
-    'NOx(GT)', 'PT08.S3(NOx)', 'NO2(GT)', 'PT08.S4(NO2)', 'PT08.S5(O3)', 'T',
-    'RH', 'AH'
-]
 
 
 class AirQualityDataset(TensorSeriesDataset):
@@ -49,32 +44,24 @@ class AirQualityDataset(TensorSeriesDataset):
                 )
 
         # This will return a dictionary mapping keys to lists
-        data = _load_csv_file(path, delimiter=';')
-        # Drop empty column.
-        data.pop('')
-        # Drop empty rows.
-        data = {k: [v for v in vs if v] for k, vs in data.items()}
+        df = pd.read_csv(path, delimiter=';', decimal=',')
+        # Drop empty columns and rows
+        df = df.dropna(how='all', axis=1).dropna(how='all', axis=0)
         # Extract time.
-        t = [
-            (datetime.strptime(f'{d} {t}', '%d/%m/%Y %H.%M.%S')
-             - datetime.min).seconds
-            for d, t in zip(data.pop('Date'), data.pop('Time'))
-        ]
-        # All other values should be castable to float, except that the decimal
-        # point is a ',' instead of '.'. Easily fixed.
-        data = [
-            [float(v.replace(',', '.')) for v in data[k]]
-            for k in AIR_QUALITY_KEYS
-        ]
-        data = [t] + data
-        data = torch.tensor(data, dtype=torch.float32)
-        # A value of -200 denotes a NaN
-        data[data == -200] = float('nan')
+        t = df.pop('Date') + ' ' + df.pop('Time')
+        t = pd.to_datetime(t, format='%d/%m/%Y %H.%M.%S')
+        # This converts time to nanoseconds, and we want seconds.
+        t = torch.from_numpy(np.array(t.astype(np.int64))) // 1_000_000_000
         # Coerce to NCT arrangement
-        data = data.unsqueeze(0)
+        t = t.view(1, 1, -1)
+        # A value of -200 denotes a NaN
+        df[df == -200] = float('nan')
+        # Convert to torch.tensor and coerce to NCT arrangement
+        data = torch.from_numpy(np.array(df, dtype=np.float32))
+        data = data.permute(1, 0).unsqueeze(0)
         super().__init__(
-            data,
+            t, data,
             transform=transform,
             return_length=return_length,
-            channel_names=AIR_QUALITY_KEYS,
+            channel_names=list(df.columns),
         )
