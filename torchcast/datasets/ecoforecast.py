@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,9 @@ from .utils import (
     _stack_mismatched_tensors,
 )
 
-__all__ = ['NEONAquaticDataset', 'NEONTerrestrialDataset']
+__all__ = [
+    'get_neon_weather_data', 'NEONAquaticDataset', 'NEONTerrestrialDataset'
+]
 
 NEON_AQUATIC_URL = 'https://data.ecoforecast.org/neon4cast-targets/aquatics/aquatics-targets.csv.gz'  # noqa
 NEON_AQUATIC_FILE_NAME = 'aquatics-targets.csv'
@@ -148,3 +150,88 @@ class NEONTerrestrialDataset(NEONDataset):
             transform=transform,
             download=download,
         )
+
+
+def get_neon_weather_data(path: str, site_ids: Union[str, List[str]],
+                          stage: int = 3, download: Union[bool, str] = False) \
+        -> torch.Tensor:
+    '''
+    Fetches weather forecast data for NEON and returns as a
+    :class:`torch.Tensor`, arranged by (site index, date, hour, variable,
+    ensemble member).
+
+    Args:
+        path (str): Path to find the dataset at.
+        site_ids (str or list of str): List of four-letter site IDs to fetch.
+        stage (int): The weather data is provided at three levels of
+        processing: 1, 2, and 3.
+        download (bool, str): Whether to download the dataset if it is not
+        already available. Since the NEON datasets are updated daily, this
+        can also be set to the string "force", which will redownload the
+        data even if the data is already present.
+    '''
+    if os.path.exists(path) and not os.path.isdir(path):
+        raise RuntimeError(f'{path} should be a directory')
+    if download:
+        os.makedirs(path, exist_ok=True)
+    if stage in {1, 2}:
+        raise NotImplementedError(stage)
+    elif stage != 3:
+        raise ValueError(stage)
+    if isinstance(site_ids, str):
+        site_ids = [site_ids]
+
+    weather, dates = [], []
+
+    for site_id in site_ids:
+        site_path = os.path.join(path, f'{site_id}.parquet')
+        # Make sure data is in place.
+        if not os.path.exists(site_path) or (download == 'force'):
+            if download:
+                _download_and_extract(
+                    GEFS_STAGE_3_URL.format(site=site_id),
+                    site_path,
+                    file_name=os.path.basename(site_path),
+                )
+            else:
+                raise FileNotFoundError(
+                    f'NEON weather dataset not found at: {path}'
+                )
+        df = pd.read_parquet(site_path)
+        # Drop unneeded columns
+        del df['longitude'], df['latitude'], df['family'], df['site_id']
+        # Combine height and variable columns, then convert to index
+        df['variable'] = df.pop('variable') + ' at ' + df.pop('height')
+        channel_names = list(df['variable'].unique())
+        var_ids = {k: i for i, k in enumerate(channel_names)}
+        df['variable'] = df['variable'].replace(var_ids)
+        # Drop NaNs
+        df = df.dropna()
+        # Convert datetime. We want both the date (to match with the NEON
+        # forecast data) and the hour (since the forecasts are provided
+        # every two hours).
+        df['date'] = df['datetime'].astype(np.int64)
+        df['date'] //= (24 * 60 * 60 * 1_000_000_000)
+        df['hour'] = df.pop('datetime').astype(np.int64)
+        df['hour'] %= (24 * 60 * 60 * 1_000_000_000)
+        df['hour'] //= (60 * 60 * 1_000_000_000)
+
+        # Fill in missing values
+        df = _add_missing_values(
+            df,
+            variable=var_ids.values(),
+            date=np.arange(df['date'].min(), df['date'].max() + 1),
+            parameter=np.arange(1, 63),
+            hour=np.arange(0, 24),
+        )
+
+        # Sort
+        df = df.sort_values(['date', 'hour', 'variable', 'parameter'])
+        preds = torch.from_numpy(np.array(df['prediction']))
+        weather.append(preds.view(-1, 24, len(channel_names), 62))
+        t = np.arange(df['date'].min(), df['date'].max() + 1)
+        dates.append(torch.from_numpy(t))
+
+    weather = torch.stack(weather, dim=0)
+    dates = torch.stack(dates, dim=0)
+    return weather, dates

@@ -91,6 +91,18 @@ class NEONTests(unittest.TestCase):
             self.assertTrue(abs(ds.series[1][0, 1, 0] - 0.58013679) < 1e-5,
                             ds.series[1][0, :, 0])
 
+    def test_weather(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            weather, dates = tc.datasets.get_neon_weather_data(
+                temp_root, ['ABBY', 'BART'], download=True,
+            )
+            self.assertEqual(len(weather.shape), 5)
+            self.assertEqual(weather.shape[2:], (24, 8, 62))
+            self.assertTrue(abs(weather[0, 2, 13, 5, 34] - 0.976870) < 1e-5)
+            self.assertEqual(len(dates.shape), 2)
+            self.assertEqual(dates.shape, weather.shape[:2])
+            self.assertEqual(dates[0, 2], 18532)
+
 
 class UtilsTests(unittest.TestCase):
     def test_stack_mismatched_tensors(self):
