@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 
+import pandas as pd
 import torch
 import torchcast as tc
 
@@ -62,7 +63,7 @@ class NEONTests(unittest.TestCase):
 
             self.assertEqual(ds.series[1].shape[:2], (34, 3))
             self.assertTrue(abs(ds.series[1][0, 0, 0] - 3.40215339) < 1e-5)
-            self.assertTrue(isnan(ds.series[1][0, 1, 0]))
+            self.assertTrue(isnan(ds.series[1][0, 1, 0]), ds.series[1][0, :, 0])
             self.assertTrue(isnan(ds.series[1][0, 2, 0]))
 
     def test_terrestrial_full_up(self):
@@ -87,7 +88,8 @@ class NEONTests(unittest.TestCase):
 
             self.assertEqual(ds.series[1].shape[:2], (47, 2))
             self.assertTrue(abs(ds.series[1][0, 0, 0] - 2.70877195) < 1e-5)
-            self.assertTrue(abs(ds.series[1][0, 1, 0] - 0.58013679) < 1e-5)
+            self.assertTrue(abs(ds.series[1][0, 1, 0] - 0.58013679) < 1e-5,
+                            ds.series[1][0, :, 0])
 
 
 class UtilsTests(unittest.TestCase):
@@ -107,6 +109,13 @@ class UtilsTests(unittest.TestCase):
         self.assertTrue(torch.isnan(tensor[1, 1, :]).all())
         self.assertTrue((tensor[2, :, :2] == 1).all())
         self.assertTrue(torch.isnan(tensor[2, :, 2]).all())
+
+    def test_add_missing_values(self):
+        df = pd.DataFrame({'a': [0, 3], 'b': [4, 5], 'c': [0, 0]})
+        df = tc.datasets.utils._add_missing_values(
+            df, a=[0, 3], b=[4, 5]
+        )
+        self.assertEqual(len(df), 4)
 
 
 if __name__ == '__main__':

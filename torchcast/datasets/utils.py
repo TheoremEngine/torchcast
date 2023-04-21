@@ -8,6 +8,7 @@ from typing import List, Optional
 import zipfile
 
 import numpy as np
+import pandas as pd
 import requests
 import torch
 
@@ -15,6 +16,23 @@ __all__ = ['load_ts_file']
 
 
 _GOOGLE_URL = 'https://drive.google.com/uc?id={doc_id}'
+
+
+def _add_missing_values(df: pd.DataFrame, **variables) -> pd.DataFrame:
+    '''
+    This creates rows in a :class:`pandas.DataFrame` to ensure that all values
+    for a set of columns have rows.
+    '''
+    # Based on the second answer at:
+    # https://stackoverflow.com/questions/31786881/adding-values-for-missing-data-combinations-in-pandas  # noqa
+    var_names, var_values = zip(*variables.items())
+    mind = pd.MultiIndex.from_product(var_values, names=var_names)
+    # The zip returns var_names as a tuple. set_index interprets a tuple as a
+    # single column name, so we need to cast to a list so it will be
+    # interpreted as a collection of column names.
+    df = df.set_index(list(var_names))
+    df = df.reindex(mind, fill_value=float('nan'))
+    return df.reset_index()
 
 
 def _download_and_extract(url: str, local_path: str,
@@ -145,6 +163,8 @@ def _stack_mismatched_tensors(tensors: List[torch.Tensor]) -> torch.Tensor:
     NaNs to the same size. We currently only support stacking 2-dimensional
     :class:`torch.Tensor`s.
     '''
+    tensors = [torch.as_tensor(x) for x in tensors]
+
     # Create the output holder
     shape = (len(tensors), *(max(s) for s in zip(*(t.shape for t in tensors))))
     dtype, device = tensors[0].dtype, tensors[0].device

@@ -6,7 +6,11 @@ import pandas as pd
 import torch
 
 from ..data import TensorSeriesDataset
-from .utils import _download_and_extract
+from .utils import (
+    _add_missing_values,
+    _download_and_extract,
+    _stack_mismatched_tensors,
+)
 
 __all__ = ['NEONAquaticDataset', 'NEONTerrestrialDataset']
 
@@ -18,13 +22,15 @@ NEON_TERRA_URL = 'https://data.ecoforecast.org/neon4cast-targets/terrestrial_dai
 NEON_TERRA_FILE_NAME = 'terrestrial_daily-targets.csv'
 NEON_TERRA_KEYS = ['le', 'nee']
 
+GEFS_STAGE_3_URL = 'https://data.ecoforecast.org/neon4cast-drivers/noaa/gefs-v12/stage3/parquet/{site}/part-0.parquet'  # noqa
+
 
 class NEONDataset(TensorSeriesDataset):
     '''
     This is a base class for NEON ecoforecast datasets.
     '''
     def __init__(self, path: str, url: str, file_name: str,
-                 download: bool = False,
+                 download: Union[bool, str] = False,
                  transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):
         # Make sure data is in place.
@@ -57,31 +63,34 @@ class NEONDataset(TensorSeriesDataset):
         var_ids = {k: i for i, k in enumerate(channel_names)}
         df['variable'] = df['variable'].replace(var_ids)
 
-        # Build buffer
-        site_date_min = df.groupby('site_id')['datetime'].min()
-        site_date_max = df.groupby('site_id')['datetime'].max()
-        n_t = (site_date_max - site_date_min).max() + 1
-        buff = torch.full(
-            (len(sites), len(channel_names), n_t), float('nan'),
-            dtype=torch.float32
-        )
+        dates, observations = [], []
 
-        # Add data to buffer. We iterate by index instead of by row to preserve
-        # the dtype. TODO: There has to be a better way to do this.
-        for row in df.index:
-            site, col = df['site_id'][row], df['variable'][row]
-            t = df['datetime'][row] - site_date_min[site]
-            buff[site, col, t] = df['observation'][row]
+        # Iterating over df.groupby returns pairs of the groupby-ed variable
+        # and the dataframe restricted to that variable value. We sort it to
+        # ensure consistent ordering of the site_ids.
+        for site_id, _df in sorted(df.groupby('site_id')):
+            del _df['site_id']
+            date_min, date_max = _df['datetime'].min(), _df['datetime'].max()
+            _df = _add_missing_values(
+                _df,
+                variable=var_ids.values(),
+                datetime=np.arange(date_min, date_max + 1),
+            )
+            _df.sort_values(['datetime', 'variable'])
+            obvs = np.array(_df['observation']).reshape(len(channel_names), -1)
+            observations.append(torch.from_numpy(obvs))
+            dates.append((date_min, date_max))
 
-        # Build dates and coerce to NCT arrangement.
-        dates = [
-            torch.arange(site_min, site_min + n_t)
-            for site_min in site_date_min
-        ]
-        dates = torch.stack(dates, dim=0).unsqueeze(1)
+        # Now convert to torch tensors
+        n_t = max(d_2 - d_1 for d_1, d_2 in dates)
+        dates = [torch.arange(d_1, d_1 + n_t + 1) for d_1, _ in dates]
+        dates = torch.stack(dates, dim=0).view(len(sites), 1, -1)
+        observations = [observations[site_id] for site_id in range(len(sites))]
+        observations = _stack_mismatched_tensors(observations)
+        observations = observations.reshape(len(sites), len(channel_names), -1)
 
         super().__init__(
-            dates, buff,
+            dates, observations,
             return_length=return_length,
             transform=transform,
             channel_names=channel_names,
