@@ -10,6 +10,9 @@ class CriteriaTest(unittest.TestCase):
         with self.assertWarns(UserWarning):
             loss = tc.nn.L1Loss()(x_1, x_2).item()
         self.assertEqual(loss, 2.5)
+        with self.assertWarns(UserWarning):
+            loss = tc.nn.l1_loss(x_1, x_2).item()
+        self.assertEqual(loss, 2.5)
 
     def test_mse_loss(self):
         x_1 = torch.tensor([[1., 2., 3.], [float('nan'), -2., -3.]])
@@ -17,20 +20,24 @@ class CriteriaTest(unittest.TestCase):
         with self.assertWarns(UserWarning):
             loss = tc.nn.MSELoss()(x_1, x_2).item()
         self.assertEqual(loss, 6.5)
+        with self.assertWarns(UserWarning):
+            loss = tc.nn.mse_loss(x_1, x_2).item()
+        self.assertEqual(loss, 6.5)
 
     def test_soft_l1_loss(self):
-        criterion = tc.nn.SoftL1Loss()
         pred = torch.tensor([1., 2., 0.5, 2, -2])
         target = torch.tensor([1, 1, 0.25, 0.5, 0])
-        loss = criterion(pred, target)
+        loss = tc.nn.SoftL1Loss((0, 1))(pred, target)
+        self.assertEqual(loss, 1.75 / 5)
+        loss = tc.nn.soft_l1_loss(pred, target, (0, 1))
         self.assertEqual(loss, 1.75 / 5)
 
     def test_soft_mse_loss(self):
-        criterion = tc.nn.SoftMSELoss()
         pred = torch.tensor([1., 2., 0.5, 2, -2])
         target = torch.tensor([1, 1, 0.25, 0.5, 0])
-        loss = criterion(pred, target)
+        loss = tc.nn.SoftMSELoss((0, 1))(pred, target)
         self.assertEqual(loss, (0.25**2 + 1.5**2) / 5)
+        loss = tc.nn.soft_mse_loss(pred, target, (0, 1))
 
 
 class LayersTest(unittest.TestCase):
