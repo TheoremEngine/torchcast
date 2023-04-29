@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from ..data import TensorSeriesDataset
+from ..data import Metadata, TensorSeriesDataset
 from .utils import _download_and_extract
 
 __all__ = ['AirQualityDataset']
@@ -63,5 +63,5 @@ class AirQualityDataset(TensorSeriesDataset):
             t, data,
             transform=transform,
             return_length=return_length,
-            channel_names=list(df.columns),
+            metadata=[None, Metadata(channel_names=list(df.columns))],
         )
