@@ -7,22 +7,42 @@ class CriteriaTest(unittest.TestCase):
     def test_l1_loss(self):
         x_1 = torch.tensor([[1., 2., 3.], [float('nan'), -2., -3.]])
         x_2 = torch.tensor([[float('nan')], [0.]])
-        with self.assertWarns(UserWarning):
-            loss = tc.nn.L1Loss()(x_1, x_2).item()
+        loss = tc.nn.L1Loss()(x_1, x_2).item()
         self.assertEqual(loss, 2.5)
-        with self.assertWarns(UserWarning):
-            loss = tc.nn.l1_loss(x_1, x_2).item()
+        loss = tc.nn.l1_loss(x_1, x_2).item()
         self.assertEqual(loss, 2.5)
+        # Test sum
+        loss = tc.nn.l1_loss(x_1, x_2, reduction='sum').item()
+        self.assertEqual(loss, 5.0)
+        # Test handling of all NaNs
+        x_2 = torch.tensor([[float('nan')], [float('nan')]])
+        x_1.requires_grad = x_2.requires_grad = True
+        x_1.retain_grad(), x_2.retain_grad()
+        loss = tc.nn.l1_loss(x_1, x_2)
+        self.assertEqual(loss.item(), 0)
+        loss.backward()
+        self.assertTrue((x_1.grad == 0).all())
+        self.assertTrue((x_2.grad == 0).all())
 
     def test_mse_loss(self):
         x_1 = torch.tensor([[1., 2., 3.], [float('nan'), -2., -3.]])
         x_2 = torch.tensor([[float('nan')], [0.]])
-        with self.assertWarns(UserWarning):
-            loss = tc.nn.MSELoss()(x_1, x_2).item()
+        loss = tc.nn.MSELoss()(x_1, x_2).item()
         self.assertEqual(loss, 6.5)
-        with self.assertWarns(UserWarning):
-            loss = tc.nn.mse_loss(x_1, x_2).item()
+        loss = tc.nn.mse_loss(x_1, x_2).item()
         self.assertEqual(loss, 6.5)
+        # Test sum
+        loss = tc.nn.mse_loss(x_1, x_2, reduction='sum').item()
+        self.assertEqual(loss, 13.0)
+        # Test handling of all NaNs
+        x_2 = torch.tensor([[float('nan')], [float('nan')]])
+        x_1.requires_grad = x_2.requires_grad = True
+        x_1.retain_grad(), x_2.retain_grad()
+        loss = tc.nn.l1_loss(x_1, x_2)
+        self.assertEqual(loss.item(), 0)
+        loss.backward()
+        self.assertTrue((x_1.grad == 0).all())
+        self.assertTrue((x_2.grad == 0).all())
 
     def test_soft_l1_loss(self):
         pred = torch.tensor([1., 2., 0.5, 2, -2])
