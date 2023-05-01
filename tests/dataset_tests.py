@@ -1,5 +1,3 @@
-import csv
-from math import isnan
 import os
 import tempfile
 import unittest
@@ -19,7 +17,9 @@ class AirQualityTest(unittest.TestCase):
 
             self.assertEqual(len(ds.data), 2)
             self.assertEqual(ds.data[0].shape, (1, 1, 9357))
+            self.assertEqual(ds.data[0].dtype, torch.int64)
             self.assertEqual(ds.data[1].shape, (1, 13, 9357))
+            self.assertEqual(ds.data[1].dtype, torch.float32)
 
             row_0 = torch.tensor([
                 2.6, 1360, 150, 11.9, 1046, 166, 1056, 113, 1692, 1268, 13.6,
@@ -41,6 +41,44 @@ class AirQualityTest(unittest.TestCase):
             self.assertEqual(ds.metadata[0], None)
             self.assertEqual(ds.metadata[1].channel_names[0], 'CO(GT)')
             self.assertEqual(ds.metadata[1].series_names, None)
+
+
+class ETTDataset(unittest.TestCase):
+    def test_full_up(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            ds = tc.datasets.ElectricityTransformerDataset(
+                temp_root, task='hourly', download=True
+            )
+            for i in [1, 2]:
+                path = os.path.join(temp_root, f'ETTh{i}.csv')
+                self.assertTrue(os.path.exists(path))
+        ds = tc.datasets.ElectricityTransformerDataset(
+            temp_root, task='15min', download=False
+        )
+
+        self.assertEqual(len(ds.data), 3)
+        self.assertEqual(ds.data[0].shape, (1, 1, 69680))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].shape, (2, 6, 69680))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        self.assertEqual(ds.data[2].shape, (2, 1, 69680))
+        self.assertEqual(ds.data[2].dtype, torch.float32)
+
+        row_0 = torch.tensor([
+            5.827000141143799, 2.009000062942505, 1.5989999771118164,
+            0.4620000123977661, 4.203000068664552, 1.3400000333786009
+        ])
+        self.assertTrue((ds.data[1][0, :, 0] == row_0).all())
+
+        self.assertEqual(ds.data[2][0, 0, 0].item(), 30.5310001373291)
+
+        self.assertTrue(isinstance(ds.metadata, list))
+        self.assertEqual(len(ds.metadata), 3)
+        self.assertEqual(ds.metadata[0], None)
+        self.assertEqual(ds.metadata[1].channel_names[0], 'High Useful Load')
+        self.assertEqual(ds.metadata[1].series_names, None)
+        self.assertEqual(ds.metadata[2].channel_names[0], 'Oil Temperature')
+        self.assertEqual(ds.metadata[2].series_names, None)
 
 
 class UtilsTests(unittest.TestCase):
