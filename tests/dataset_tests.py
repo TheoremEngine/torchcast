@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 
+import numpy as np
 import pandas as pd
 import torch
 import torchcast as tc
@@ -101,6 +102,25 @@ class ETTDataset(unittest.TestCase):
         self.assertEqual(ds.metadata[1].series_names, None)
         self.assertEqual(ds.metadata[2].channel_names[0], 'Oil Temperature')
         self.assertEqual(ds.metadata[2].series_names, None)
+
+
+class ExchangeRateDataset(unittest.TestCase):
+    def test_full_up(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            ds = tc.datasets.ExchangeRateDataset(temp_root, download=True)
+
+        self.assertEqual(len(ds.data), 1)
+        self.assertEqual(ds.data[0].shape, (1, 8, 7587))
+        self.assertEqual(ds.data[0].dtype, torch.float32)
+
+        row = np.array([
+            0.7817999720573425, 1.6100000143051147, 0.8611040115356445,
+            0.6335129737854004, 0.21124200522899628, 0.006862999871373177,
+            0.593999981880188, 0.5239719748497009
+        ])
+
+        for c in range(8):
+            self.assertTrue(isclose(ds.data[0][0, c, 0], row[c]))
 
 
 class UtilsTests(unittest.TestCase):

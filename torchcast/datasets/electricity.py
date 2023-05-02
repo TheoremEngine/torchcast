@@ -14,6 +14,11 @@ ELECTRICITY_LOAD_FILE_NAME = 'LD2011_2014.txt'
 
 
 class ElectricityLoadDataset(TensorSeriesDataset):
+    '''
+    Electricity Load dataset from:
+
+    https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014
+    '''
     def __init__(self, path: str, download: Union[str, bool] = False,
                  transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):
