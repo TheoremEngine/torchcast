@@ -1,3 +1,4 @@
+from math import isclose
 import os
 import tempfile
 import unittest
@@ -41,6 +42,27 @@ class AirQualityTest(unittest.TestCase):
             self.assertEqual(ds.metadata[0], None)
             self.assertEqual(ds.metadata[1].channel_names[0], 'CO(GT)')
             self.assertEqual(ds.metadata[1].series_names, None)
+
+
+class ElectricityLoadDataset(unittest.TestCase):
+    def test_full_up(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            with self.assertRaises(FileNotFoundError):
+                ds = tc.datasets.ElectricityLoadDataset(
+                    temp_root, download=False
+                )
+            ds = tc.datasets.ElectricityLoadDataset(
+                temp_root, download=True
+            )
+
+        self.assertEqual(len(ds.data), 2)
+        self.assertEqual(ds.data[0].shape, (1, 1, 140256))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].shape, (1, 370, 140256))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+
+        self.assertTrue((ds.data[1][0, :123, 0] == 0).all())
+        self.assertTrue(isclose(ds.data[1][0, 123, 0].item(), 71.77033233643))
 
 
 class ETTDataset(unittest.TestCase):
