@@ -124,6 +124,33 @@ class ExchangeRateDataset(unittest.TestCase):
             self.assertTrue(isclose(ds.data[0][0, c, 0], row[c]))
 
 
+class GermanWeatherDataset(unittest.TestCase):
+    def test_full_up(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            ds = tc.datasets.GermanWeatherDataset(temp_root, download=True)
+            for part in ['a', 'b']:
+                path = os.path.join(temp_root, f'mpi_roof_2020{part}.csv')
+                self.assertTrue(os.path.exists(path))
+
+        self.assertEqual(len(ds.data), 2)
+        self.assertEqual(ds.data[0].shape, (1, 1, 52696))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].shape, (1, 21, 52696))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+
+        self.assertEqual(ds.data[0][0, 0, 0], 1577837400)
+
+        self.assertTrue(abs(ds.data[1][0, 0, 0].item() - 1008.89) < 0.01)
+        self.assertTrue(abs(ds.data[1][0, 1, 0].item() - 0.71) < 0.01)
+        self.assertTrue(abs(ds.data[1][0, 2, 0].item() - 273.18) < 0.01)
+
+        self.assertTrue(isinstance(ds.metadata, list))
+        self.assertEqual(len(ds.metadata), 2)
+        self.assertEqual(ds.metadata[0], None)
+        self.assertEqual(ds.metadata[1].channel_names[0], 'p (mbar)')
+        self.assertEqual(ds.metadata[1].series_names, None)
+
+
 class SanFranciscoTrafficDataset(unittest.TestCase):
     def test_full_up(self):
         with tempfile.TemporaryDirectory() as temp_root:

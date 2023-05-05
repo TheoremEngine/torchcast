@@ -4,3 +4,4 @@ from .ett import *
 from .exchange_rate import *
 from .traffic import *
 from .utils import *
+from .weather import *
