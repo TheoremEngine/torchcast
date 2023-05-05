@@ -1,3 +1,4 @@
+from datetime import datetime
 from math import isclose
 import os
 import tempfile
@@ -123,6 +124,26 @@ class ExchangeRateDataset(unittest.TestCase):
             self.assertTrue(isclose(ds.data[0][0, c, 0], row[c]))
 
 
+class SanFranciscoTrafficDataset(unittest.TestCase):
+    def test_full_up(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            with self.assertRaises(FileNotFoundError):
+                ds = tc.datasets.SanFranciscoTrafficDataset(
+                    temp_root, download=False
+                )
+            ds = tc.datasets.SanFranciscoTrafficDataset(
+                temp_root, download=True
+            )
+
+        self.assertEqual(len(ds.data), 1)
+        self.assertEqual(ds.data[0].shape, (1, 862, 17544))
+        self.assertEqual(ds.data[0].dtype, torch.float32)
+
+        self.assertTrue(isclose(ds.data[0][0, 0, 0].item(), 0.00480000022799))
+        self.assertTrue(isclose(ds.data[0][0, 1, 0].item(), 0.01460000034422))
+        self.assertTrue(isclose(ds.data[0][0, 2, 0].item(), 0.02889999933541))
+
+
 class UtilsTests(unittest.TestCase):
     def test_stack_mismatched_tensors(self):
         tensors = [
@@ -147,6 +168,27 @@ class UtilsTests(unittest.TestCase):
             df, a=[0, 3], b=[4, 5]
         )
         self.assertEqual(len(df), 4)
+
+    def test_load_tsf_file(self):
+        path = os.path.join(os.path.dirname(__file__), 'data/example.tsf')
+        series, attrs = tc.load_tsf_file(path)
+
+        self.assertEqual(series.shape, (2, 4))
+        self.assertEqual(len(attrs), 3)
+
+        should_be = torch.tensor([
+            [1., 2., 3., 4.],
+            [5., 6., 7., 8.]
+        ])
+        self.assertTrue((series == should_be).all(), series)
+
+        self.assertEqual(attrs.keys(), {'str', 'num', 'dat'})
+        self.assertEqual(attrs['str'], ['a', 'b'])
+        self.assertEqual(attrs['num'], [1, 2])
+        self.assertEqual(
+            attrs['dat'],
+            [datetime(2010, 1, 1, 0, 0, 0), datetime(2010, 1, 2, 0, 0, 0)]
+        )
 
 
 if __name__ == '__main__':
