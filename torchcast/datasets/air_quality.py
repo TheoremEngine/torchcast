@@ -47,6 +47,7 @@ class AirQualityDataset(TensorSeriesDataset):
         df = pd.read_csv(path, delimiter=';', decimal=',')
         # Drop empty columns and rows
         df = df.dropna(how='all', axis=1).dropna(how='all', axis=0)
+
         # Extract time.
         t = df.pop('Date') + ' ' + df.pop('Time')
         t = pd.to_datetime(t, format='%d/%m/%Y %H.%M.%S')
@@ -54,14 +55,18 @@ class AirQualityDataset(TensorSeriesDataset):
         t = torch.from_numpy(np.array(t.astype(np.int64))) // 1_000_000_000
         # Coerce to NCT arrangement
         t = t.view(1, 1, -1)
+        time_meta = Metadata(name='Datetime')
+
         # A value of -200 denotes a NaN
         df[df == -200] = float('nan')
         # Convert to torch.tensor and coerce to NCT arrangement
         data = torch.from_numpy(np.array(df, dtype=np.float32))
         data = data.permute(1, 0).unsqueeze(0)
+        data_meta = Metadata(name='Data', channel_names=list(df.columns))
+
         super().__init__(
             t, data,
             transform=transform,
             return_length=return_length,
-            metadata=[None, Metadata(channel_names=list(df.columns))],
+            metadata=[time_meta, data_meta],
         )

@@ -89,15 +89,17 @@ class GermanWeatherDataset(TensorSeriesDataset):
         # This converts time to nanoseconds, and we want seconds.
         dates = np.array(dates.astype(np.int64)) // 1_000_000_000
         dates = dates.reshape(1, 1, dates.shape[0])
+        date_meta = Metadata(name='Datetime')
+
         if len(data) > 1:
             data = np.stack(data, axis=0)
         else:
             data = data[0].reshape(1, *data[0].shape)
-        meta = Metadata(channel_names=channel_names)
+        data_meta = Metadata(name='Data', channel_names=channel_names)
 
         super().__init__(
             dates, data,
             transform=transform,
             return_length=return_length,
-            metadata=[None, meta]
+            metadata=[date_meta, data_meta]
         )

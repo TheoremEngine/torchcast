@@ -41,7 +41,10 @@ class AirQualityTest(unittest.TestCase):
 
             self.assertTrue(isinstance(ds.metadata, list))
             self.assertEqual(len(ds.metadata), 2)
-            self.assertEqual(ds.metadata[0], None)
+            self.assertEqual(ds.metadata[0].name, 'Datetime')
+            self.assertEqual(ds.metadata[0].channel_names, None)
+            self.assertEqual(ds.metadata[0].series_names, None)
+            self.assertEqual(ds.metadata[1].name, 'Data')
             self.assertEqual(ds.metadata[1].channel_names[0], 'CO(GT)')
             self.assertEqual(ds.metadata[1].series_names, None)
 
@@ -65,6 +68,15 @@ class ElectricityLoadDataset(unittest.TestCase):
 
         self.assertTrue((ds.data[1][0, :123, 0] == 0).all())
         self.assertTrue(isclose(ds.data[1][0, 123, 0].item(), 71.77033233643))
+
+        self.assertTrue(isinstance(ds.metadata, list))
+        self.assertEqual(len(ds.metadata), 2)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, None)
+        self.assertEqual(ds.metadata[1].name, 'Electricity Load')
+        self.assertEqual(ds.metadata[1].channel_names, None)
+        self.assertEqual(ds.metadata[1].series_names, None)
 
 
 class ETTDataset(unittest.TestCase):
@@ -98,9 +110,13 @@ class ETTDataset(unittest.TestCase):
 
         self.assertTrue(isinstance(ds.metadata, list))
         self.assertEqual(len(ds.metadata), 3)
-        self.assertEqual(ds.metadata[0], None)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, None)
+        self.assertEqual(ds.metadata[1].name, 'Predictors')
         self.assertEqual(ds.metadata[1].channel_names[0], 'High Useful Load')
         self.assertEqual(ds.metadata[1].series_names, None)
+        self.assertEqual(ds.metadata[2].name, 'Target')
         self.assertEqual(ds.metadata[2].channel_names[0], 'Oil Temperature')
         self.assertEqual(ds.metadata[2].series_names, None)
 
@@ -146,7 +162,10 @@ class GermanWeatherDataset(unittest.TestCase):
 
         self.assertTrue(isinstance(ds.metadata, list))
         self.assertEqual(len(ds.metadata), 2)
-        self.assertEqual(ds.metadata[0], None)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, None)
+        self.assertEqual(ds.metadata[1].name, 'Data')
         self.assertEqual(ds.metadata[1].channel_names[0], 'p (mbar)')
         self.assertEqual(ds.metadata[1].series_names, None)
 

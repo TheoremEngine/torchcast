@@ -72,19 +72,26 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
 
         dates = pd.to_datetime(dates, format='%Y-%m-%d %H:%M:%S')
         dates = np.array(dates, dtype=np.int64).reshape(1, 1, -1)
+        date_meta = Metadata(name='Datetime')
 
         target = [np.array(df.pop('OT'), dtype=np.float32) for df in dfs]
         target = np.stack(target, axis=0).reshape(2, 1, -1)
-        target_meta = Metadata(channel_names=['Oil Temperature'])
+        target_meta = Metadata(
+            name='Target',
+            channel_names=['Oil Temperature'],
+        )
 
         channel_names = [COLUMN_NAME_MAP[col] for col in dfs[0].columns]
         pred = [np.array(df, dtype=np.float32).T for df in dfs]
         pred = np.stack(pred, axis=0)
-        pred_meta = Metadata(channel_names=channel_names)
+        pred_meta = Metadata(
+            name='Predictors',
+            channel_names=channel_names,
+        )
 
         super().__init__(
             dates, pred, target,
             transform=transform,
             return_length=return_length,
-            metadata=[None, pred_meta, target_meta],
+            metadata=[date_meta, pred_meta, target_meta],
         )

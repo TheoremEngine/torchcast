@@ -4,7 +4,7 @@ from typing import Callable, Optional, Union
 import numpy as np
 import pandas as pd
 
-from ..data import TensorSeriesDataset
+from ..data import Metadata, TensorSeriesDataset
 from .utils import _download_and_extract
 
 __all__ = ['ElectricityLoadDataset']
@@ -57,4 +57,6 @@ class ElectricityLoadDataset(TensorSeriesDataset):
             date, data,
             transform=transform,
             return_length=return_length,
+            metadata=[Metadata(name='Datetime'),
+                      Metadata(name='Electricity Load')],
         )

@@ -13,6 +13,7 @@ class Metadata:
     '''
     :class:`Metadata` encapsulates metadata about a multiseries.
     '''
+    name: Optional[str] = None
     channel_names: Optional[List[str]] = None
     series_names: Optional[List[str]] = None
 

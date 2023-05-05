@@ -40,14 +40,14 @@ class ILIDataset(TensorSeriesDataset):
 
         # Extract dates
         date = np.array(df[['YEAR', 'WEEK']]).T.reshape(1, 2, -1)
-        date_meta = Metadata(channel_names=['YEAR', 'WEEK'])
+        date_meta = Metadata(name='Date', channel_names=['YEAR', 'WEEK'])
         del df['YEAR'], df['WEEK']
 
         # Convert data columns to float
         for col in df.columns:
             df[col] = df[col].astype(np.float32)
         data = np.array(df).T.reshape(1, 11, -1)
-        data_meta = Metadata(channel_names=df.columns)
+        data_meta = Metadata(name='Data', channel_names=df.columns)
 
         super().__init__(
             date, data,
