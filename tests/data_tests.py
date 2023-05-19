@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 import os
 import tempfile
-from typing import Dict, Sequence
+from typing import Dict
 import unittest
 
 import h5py
@@ -32,7 +32,7 @@ class SeriesTest(unittest.TestCase):
 
     def test_find_i_t(self):
         ds = tc.data.SeriesDataset(return_length=4)
-        ds.data = [tc.data.utils.ListOfSeries([
+        ds.data = [tc.data.ListOfTensors([
             torch.empty((3, 6)),
             torch.empty((3, 4)),
             torch.empty((3, 5)),
@@ -49,7 +49,7 @@ class SeriesTest(unittest.TestCase):
     def test_time_ranges(self):
         ds = tc.data.SeriesDataset()
         ds.data = [
-            tc.data.utils.ListOfSeries([
+            tc.data.ListOfTensors([
                 torch.empty((2, 4)), torch.empty((2, 5))
             ]),
             torch.empty((2, 3, 1))
@@ -64,7 +64,7 @@ class SeriesTest(unittest.TestCase):
     def test_shape(self):
         ds = tc.data.SeriesDataset()
         ds.data = [
-            tc.data.utils.ListOfSeries([
+            tc.data.ListOfTensors([
                 torch.empty((2, 4)), torch.empty((2, 5))
             ]),
             torch.empty((2, 3, 1))
@@ -224,11 +224,95 @@ class TensorSeriesTest(unittest.TestCase):
         with self.assertRaises(IndexError):
             ds[2]
 
+    def test_split_by_float_time(self):
+        # Test cases that must be handled:
+        # 1. NCT torch.Tensor
+        data_1 = torch.arange(30).reshape(2, 3, 5)
+        # 2. NC1 torch.Tensor
+        data_2 = torch.arange(6).reshape(2, 3, 1)
+        # 3. List[CT torch.Tensor]
+        data_3 = [
+            torch.arange(6).reshape(2, 3),
+            torch.arange(10).reshape(2, 5),
+        ]
+        ds = tc.data.TensorSeriesDataset(data_1, data_2, data_3)
+
+        ds_1, ds_2 = ds.split_by_time(0.8)
+
+        self.assertEqual(len(ds_1.data), 3)
+        self.assertTrue(isinstance(ds_1.data[0], torch.Tensor))
+        self.assertEqual(ds_1.data[0].shape, (2, 3, 4))
+        self.assertTrue((ds_1.data[0] == data_1[:, :, :4]).all())
+        self.assertTrue(isinstance(ds_1.data[1], torch.Tensor))
+        self.assertEqual(ds_1.data[1].shape, (2, 3, 1))
+        self.assertTrue((ds_1.data[1] == data_2).all())
+        self.assertTrue(isinstance(ds_1.data[2], tc.data.ListOfTensors))
+        self.assertEqual(len(ds_1.data[2].tensors), 2)
+        self.assertEqual(ds_1.data[2].tensors[0].shape, (2, 3))
+        self.assertTrue((ds_1.data[2].tensors[0] == data_3[0]).all())
+        self.assertEqual(ds_1.data[2].tensors[1].shape, (2, 4))
+        self.assertTrue((ds_1.data[2].tensors[1] == data_3[1][:, :4]).all())
+
+        self.assertEqual(len(ds_2.data), 3)
+        self.assertTrue(isinstance(ds_2.data[0], torch.Tensor))
+        self.assertEqual(ds_2.data[0].shape, (2, 3, 1))
+        self.assertTrue((ds_2.data[0] == data_1[:, :, 4:]).all())
+        self.assertTrue(isinstance(ds_2.data[1], torch.Tensor))
+        self.assertEqual(ds_2.data[1].shape, (2, 3, 1))
+        self.assertTrue((ds_2.data[1] == data_2).all())
+        self.assertTrue(isinstance(ds_2.data[2], tc.data.ListOfTensors))
+        self.assertEqual(len(ds_2.data[2].tensors), 2)
+        self.assertEqual(ds_2.data[2].tensors[0].shape, (2, 0))
+        self.assertEqual(ds_2.data[2].tensors[1].shape, (2, 1))
+        self.assertTrue((ds_2.data[2].tensors[1] == data_3[1][:, 4:]).all())
+
+    def test_split_by_integer_time(self):
+        # Test cases that must be handled:
+        # 1. NCT torch.Tensor
+        data_1 = torch.arange(30).reshape(2, 3, 5)
+        # 2. NC1 torch.Tensor
+        data_2 = torch.arange(6).reshape(2, 3, 1)
+        # 3. List[CT torch.Tensor]
+        data_3 = [
+            torch.arange(6).reshape(2, 3),
+            torch.arange(10).reshape(2, 5),
+        ]
+        ds = tc.data.TensorSeriesDataset(data_1, data_2, data_3)
+
+        ds_1, ds_2 = ds.split_by_time(4)
+
+        self.assertEqual(len(ds_1.data), 3)
+        self.assertTrue(isinstance(ds_1.data[0], torch.Tensor))
+        self.assertEqual(ds_1.data[0].shape, (2, 3, 4))
+        self.assertTrue((ds_1.data[0] == data_1[:, :, :4]).all())
+        self.assertTrue(isinstance(ds_1.data[1], torch.Tensor))
+        self.assertEqual(ds_1.data[1].shape, (2, 3, 1))
+        self.assertTrue((ds_1.data[1] == data_2).all())
+        self.assertTrue(isinstance(ds_1.data[2], tc.data.ListOfTensors))
+        self.assertEqual(len(ds_1.data[2].tensors), 2)
+        self.assertEqual(ds_1.data[2].tensors[0].shape, (2, 3))
+        self.assertTrue((ds_1.data[2].tensors[0] == data_3[0]).all())
+        self.assertEqual(ds_1.data[2].tensors[1].shape, (2, 4))
+        self.assertTrue((ds_1.data[2].tensors[1] == data_3[1][:, :4]).all())
+
+        self.assertEqual(len(ds_2.data), 3)
+        self.assertTrue(isinstance(ds_2.data[0], torch.Tensor))
+        self.assertEqual(ds_2.data[0].shape, (2, 3, 1))
+        self.assertTrue((ds_2.data[0] == data_1[:, :, 4:]).all())
+        self.assertTrue(isinstance(ds_2.data[1], torch.Tensor))
+        self.assertEqual(ds_2.data[1].shape, (2, 3, 1))
+        self.assertTrue((ds_2.data[1] == data_2).all())
+        self.assertTrue(isinstance(ds_2.data[2], tc.data.ListOfTensors))
+        self.assertEqual(len(ds_2.data[2].tensors), 2)
+        self.assertEqual(ds_2.data[2].tensors[0].shape, (2, 0))
+        self.assertEqual(ds_2.data[2].tensors[1].shape, (2, 1))
+        self.assertTrue((ds_2.data[2].tensors[1] == data_3[1][:, 4:]).all())
+
 
 class H5SeriesTest(unittest.TestCase):
     @staticmethod
     @contextmanager
-    def _create_h5_file(shapes: Dict[str, Sequence[int]]):
+    def _create_h5_file(shapes: Dict):
         with tempfile.TemporaryDirectory() as temp_root:
             path = os.path.join(temp_root, 'test.h5')
             with h5py.File(path, 'w') as h5_file:
@@ -288,7 +372,7 @@ class H5SeriesTest(unittest.TestCase):
             with self.assertRaises(IndexError):
                 ds[4]
 
-    def test_full_up_with_return_length(self):
+    def test_full_up_without_return_length(self):
         data = {
             'a': np.random.normal(0, 1, (2, 5, 1)),
             'b': np.random.normal(0, 1, (1, 4, 3)),
@@ -354,6 +438,56 @@ class H5SeriesTest(unittest.TestCase):
                 self.assertEqual(h5_view[0][1].ndim, 1)
                 self.assertEqual(h5_view[0][1].shape, (1,))
 
+    def test_split_by_float_time(self):
+        # Test cases that must be handled:
+        # 1. NCT Dataset
+        data_1 = np.arange(30).reshape(2, 3, 5)
+        # 2. NC1 Dataset
+        data_2 = np.arange(6).reshape(2, 3, 1)
+        data = {'a': data_1, 'b': data_2}
+
+        with self._create_h5_file(data) as path:
+            ds = tc.data.H5SeriesDataset(path, ('a', 'b'))
+
+            ds_1, ds_2 = ds.split_by_time(0.8)
+
+            self.assertEqual(len(ds_1.data), 2)
+            self.assertEqual(ds_1.data[0].shape, (2, 3, 4))
+            self.assertTrue((np.array(ds_1.data[0]) == data_1[:, :, :4]).all())
+            self.assertEqual(ds_1.data[1].shape, (2, 3, 1))
+            self.assertTrue((np.array(ds_1.data[1]) == data_2).all())
+
+            self.assertEqual(len(ds_2.data), 2)
+            self.assertEqual(ds_2.data[0].shape, (2, 3, 1))
+            self.assertTrue((np.array(ds_2.data[0]) == data_1[:, :, 4:]).all())
+            self.assertEqual(ds_2.data[1].shape, (2, 3, 1))
+            self.assertTrue((np.array(ds_2.data[1]) == data_2).all())
+
+    def test_split_by_integer_time(self):
+        # Test cases that must be handled:
+        # 1. NCT Dataset
+        data_1 = np.arange(30).reshape(2, 3, 5)
+        # 2. NC1 Dataset
+        data_2 = np.arange(6).reshape(2, 3, 1)
+        data = {'a': data_1, 'b': data_2}
+
+        with self._create_h5_file(data) as path:
+            ds = tc.data.H5SeriesDataset(path, ('a', 'b'))
+
+            ds_1, ds_2 = ds.split_by_time(4)
+
+            self.assertEqual(len(ds_1.data), 2)
+            self.assertEqual(ds_1.data[0].shape, (2, 3, 4))
+            self.assertTrue((np.array(ds_1.data[0]) == data_1[:, :, :4]).all())
+            self.assertEqual(ds_1.data[1].shape, (2, 3, 1))
+            self.assertTrue((np.array(ds_1.data[1]) == data_2).all())
+
+            self.assertEqual(len(ds_2.data), 2)
+            self.assertEqual(ds_2.data[0].shape, (2, 3, 1))
+            self.assertTrue((np.array(ds_2.data[0]) == data_1[:, :, 4:]).all())
+            self.assertEqual(ds_2.data[1].shape, (2, 3, 1))
+            self.assertTrue((np.array(ds_2.data[1]) == data_2).all())
+
 
 class UtilsTest(unittest.TestCase):
     def test_coerce_to_multiseries(self):
@@ -363,7 +497,7 @@ class UtilsTest(unittest.TestCase):
         d = torch.randn((5,))
 
         out = tc.data.utils._coerce_to_multiseries([a, b])
-        self.assertTrue(isinstance(out, tc.data.utils.ListOfSeries))
+        self.assertTrue(isinstance(out, tc.data.utils.ListOfTensors))
 
         out = tc.data.utils._coerce_to_multiseries(c)
         self.assertIs(out, c)
@@ -410,7 +544,7 @@ class UtilsTest(unittest.TestCase):
     def test_list_of_series(self):
         a = torch.randn((5, 3))
         b = torch.randn((5, 4))
-        ls = tc.data.utils.ListOfSeries([a, b])
+        ls = tc.data.ListOfTensors([a, b])
 
         self.assertEqual(ls.ndim, 3)
         self.assertEqual(ls.shape, (2, 5, 4))
@@ -423,13 +557,16 @@ class UtilsTest(unittest.TestCase):
         self.assertTrue((ls[1] == b).all())
         self.assertTrue((ls[1, 1:3] == b[1:3]).all())
 
+        self.assertTrue(isinstance(ls[0:3], tc.data.ListOfTensors))
+        self.assertTrue(isinstance(ls[0:3, 1:3], tc.data.ListOfTensors))
+
 
 class SamplerTest(unittest.TestCase):
     def test_infinite_sampler(self):
         # Smoke test
         sampler = tc.data.samplers.InfiniteSampler(4)
         sample_iter = iter(sampler)
-        out = [next(sample_iter) for _ in range(8)]
+        [next(sample_iter) for _ in range(8)]
 
 
 if __name__ == '__main__':

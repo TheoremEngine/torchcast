@@ -15,7 +15,7 @@ class ArrayLike(Protocol):
     ndim: int
 
 
-class ListOfSeries:
+class ListOfTensors:
     '''
     This class encapsulates a list of :class:`torch.Tensor`. This is used so
     that we can have a single multiseries whose constituent series are varying
@@ -35,8 +35,17 @@ class ListOfSeries:
     def __getitem__(self, idx):
         if isinstance(idx, int):
             return self.tensors[idx]
+        elif isinstance(idx, slice):
+            return type(self)(self.tensors[idx])
         elif isinstance(idx, tuple):
-            return self.tensors[idx[0]].__getitem__(idx[1:])
+            if isinstance(idx[0], slice):
+                out = [
+                    tensor.__getitem__(idx[1:])
+                    for tensor in self[idx[0]]
+                ]
+                return type(self)(out)
+            else:
+                return self.tensors[idx[0]].__getitem__(idx[1:])
         else:
             raise IndexError(idx)
 
@@ -50,7 +59,7 @@ class ListOfSeries:
         return (len(self.tensors), self.tensors[0].shape[0], t)
 
 
-def _coerce_to_multiseries(x: ArrayLike) -> Union[torch.Tensor, ListOfSeries]:
+def _coerce_to_multiseries(x: ArrayLike) -> Union[torch.Tensor, ListOfTensors]:
     '''
     Convenience function to coerce an array-like object to a
     :class:`torch.Tensor` of 3 dimensions.
@@ -61,7 +70,7 @@ def _coerce_to_multiseries(x: ArrayLike) -> Union[torch.Tensor, ListOfSeries]:
         and isinstance(x[0], (np.ndarray, torch.Tensor))
         and len({_x.shape[-1] for _x in x}) > 1
     ):
-        return ListOfSeries(x)
+        return ListOfTensors(x)
 
     x = torch.as_tensor(x)
     if x.ndim == 1:

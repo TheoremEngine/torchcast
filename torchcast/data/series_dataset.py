@@ -114,11 +114,11 @@ class SeriesDataset(torch.utils.data.Dataset):
         # number of series or amount of time.
         if len({x.shape[0] for x in data} - {1}) > 1:
             raise ValueError(
-                f'Conflicting number of series: {x.shape for x in data}'
+                f'Conflicting number of series: {[x.shape for x in data]}'
             )
         if len({x.shape[2] for x in data} - {1}) > 1:
             raise ValueError(
-                f'Conflicting time length: {x.shape for x in data}'
+                f'Conflicting time length: {[x.shape for x in data]}'
             )
         return data
 
@@ -150,3 +150,32 @@ class SeriesDataset(torch.utils.data.Dataset):
             -1,
             max(x.shape[2] for x in self.data)
         )
+
+    def split_by_time(self, t: Union[int, float]) \
+            -> Tuple['SeriesDataset', 'SeriesDataset']:
+        '''
+        Splits the dataset by time.
+
+        Args:
+            t (int or float): If this is an integer, then perform the split at
+            this time. If it is a float, perform the split at this percentage
+            of the time.
+        '''
+        def _split_by_time(ms: ArrayLike, t: Union[int, float]):
+            if ms.shape[2] == 1:
+                return ms, ms
+            else:
+                if isinstance(t, float):
+                    t = int(ms.shape[2] * t)
+                return ms[:, :, :t], ms[:, :, t:]
+
+        data_a, data_b = zip(*(_split_by_time(ms, t) for ms in self.data))
+        ds_a = SeriesDataset(
+            *data_a, return_length=self.return_length, transform=self.transform,
+            metadata=self.metadata,
+        )
+        ds_b = SeriesDataset(
+            *data_b, return_length=self.return_length, transform=self.transform,
+            metadata=self.metadata,
+        )
+        return ds_a, ds_b
