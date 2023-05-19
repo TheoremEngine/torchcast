@@ -1,4 +1,7 @@
 import unittest
+import warnings
+
+warnings.simplefilter('error')
 
 from data_tests import *
 from dataset_tests import *
