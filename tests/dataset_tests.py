@@ -1,5 +1,5 @@
 from datetime import datetime
-from math import isclose
+from math import isclose, isnan
 import os
 import tempfile
 import unittest
@@ -215,22 +215,45 @@ class UtilsTests(unittest.TestCase):
         )
         self.assertEqual(len(df), 4)
 
-    def test_load_tsf_file(self):
-        path = os.path.join(os.path.dirname(__file__), 'data/example.tsf')
+    def test_load_tsf_file_1(self):
+        path = os.path.join(os.path.dirname(__file__), 'data/example_1.tsf')
         series, attrs = tc.load_tsf_file(path)
 
         self.assertEqual(series.shape, (2, 4))
-        self.assertEqual(len(attrs), 3)
+        self.assertEqual(len(attrs), 4)
 
-        should_be = torch.tensor([
+        should_be = np.array([
             [1., 2., 3., 4.],
             [5., 6., 7., 8.]
         ])
         self.assertTrue((series == should_be).all(), series)
 
-        self.assertEqual(attrs.keys(), {'str', 'num', 'dat'})
+        self.assertEqual(attrs.keys(), {'str', 'num', 'dat', 'horizon'})
         self.assertEqual(attrs['str'], ['a', 'b'])
-        self.assertEqual(attrs['num'], [1, 2])
+        self.assertTrue(isinstance(attrs['num'], np.ndarray))
+        self.assertTrue((attrs['num'] == np.array([1, 2])).all())
+        self.assertEqual(
+            attrs['dat'],
+            [datetime(2010, 1, 1, 0, 0, 0), datetime(2010, 1, 2, 0, 0, 0)]
+        )
+
+    def test_load_tsf_file_2(self):
+        path = os.path.join(os.path.dirname(__file__), 'data/example_2.tsf')
+        series, attrs = tc.load_tsf_file(path)
+
+        self.assertEqual(len(series), 2)
+        self.assertEqual(len(attrs), 4)
+
+        self.assertEqual(series[0].shape, (4,))
+        self.assertTrue(isnan(series[0][0]))
+        self.assertTrue((series[0][1:] == np.array([2., 3., 4.])).all())
+        self.assertEqual(series[1].shape, (3,))
+        self.assertTrue((series[1] == np.array([5., 6., 7.])).all())
+
+        self.assertEqual(attrs.keys(), {'str', 'num', 'dat', 'horizon'})
+        self.assertEqual(attrs['str'], ['a', 'b'])
+        self.assertTrue(isinstance(attrs['num'], np.ndarray))
+        self.assertTrue((attrs['num'] == np.array([1, 2])).all())
         self.assertEqual(
             attrs['dat'],
             [datetime(2010, 1, 1, 0, 0, 0), datetime(2010, 1, 2, 0, 0, 0)]
