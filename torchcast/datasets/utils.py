@@ -1,18 +1,18 @@
-from collections import defaultdict
-from datetime import datetime
 import gzip
 from io import BytesIO
 import lzma
 import os
 import re
 import tarfile
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 import zipfile
 
 import numpy as np
 import pandas as pd
 import requests
 import torch
+
+from ._C import load_tsf_file
 
 __all__ = ['load_ts_file', 'load_tsf_file']
 
@@ -177,76 +177,6 @@ def _stack_mismatched_tensors(tensors: List[torch.Tensor]) -> torch.Tensor:
         out[i, :tensor.shape[0], :tensor.shape[1]] = tensor
 
     return out
-
-
-_TSF_ATTR_MAPS = {
-    'string': str,
-    'numeric': int,
-    'date': lambda x: datetime.strptime(x, '%Y-%m-%d %H-%M-%S'),
-}
-
-
-def load_tsf_file(series_file: str) -> Tuple[torch.Tensor, Dict[str, List]]:
-    '''
-    Parses a .tsf file, based on the .ts file format. This is documented at:
-
-        https://github.com/rakshitha123/TSForecasting
-
-    Returns a pair. The first entry in the pair is :class:`torch.Tensor`
-    containing the actual data. The second entry is a dictionary containing the
-    additional attributes.
-    '''
-    if isinstance(series_file, str):
-        with open(series_file, 'r') as series_file:
-            return load_tsf_file(series_file)
-
-    # Valid keys in the tsf header:
-    #
-    # attribute (str, str)
-    # frequency (str)
-    # horizon (int)
-    # missing (bool)
-    # equallength (bool)
-
-    attr_names, attr_maps = [], []
-
-    for line in series_file:
-        line = line.strip()
-        if (not line) or line.startswith('#'):
-            continue
-        elif line.startswith('@data'):
-            break
-        elif line.startswith('@attribute'):
-            _, attr_name, attr_type = line.split(' ')
-            if attr_type not in _TSF_ATTR_MAPS.keys():
-                raise ValueError(f'Attribute type {attr_type} not recognized')
-            attr_names.append(attr_name)
-            attr_maps.append(_TSF_ATTR_MAPS[attr_type])
-        elif line.startswith('@'):
-            continue
-        else:
-            raise ValueError(f'Cannot parse line {line}')
-    else:
-        raise ValueError('No data in file')
-
-    num_cols = len(attr_names) + 1
-    data, attr_values = [], defaultdict(list)
-
-    for line in series_file:
-        line = line.strip().split(':')
-        if len(line) != num_cols:
-            raise ValueError(line)
-        for attr_name, attr_map, x in zip(attr_names, attr_maps, line[:-1]):
-            attr_values[attr_name].append(attr_map(x))
-        datum = [float(x) for x in line[-1].replace('?', 'nan').split(',')]
-        data.append(torch.tensor(datum, dtype=torch.float32))
-
-    if all(len(x) == len(data[0]) for x in data[1:]):
-        data = torch.stack(data, dim=0)
-    else:
-        data = _stack_mismatched_tensors(data)
-
-    return data, dict(attr_values)
 
 
 def load_ts_file(series_file: str):

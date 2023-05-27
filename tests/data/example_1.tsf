@@ -1,9 +1,17 @@
 # Example tsf File
 
-# This is a comment.
+  # This is a comment.
+
+@frequency 12
+   
+@horizon 4  # Comment!
+
+  @missing true
+
+@equallength true
 
 @attribute str string
-@attribute num numeric
+  @attribute num numeric  # sdf
 @attribute dat date
 
 @data

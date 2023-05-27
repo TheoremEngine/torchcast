@@ -1,6 +1,8 @@
 import os
 from typing import Callable, Optional, Union
 
+import torch
+
 from ..data import TensorSeriesDataset
 from .utils import _download_and_extract, load_tsf_file
 
@@ -47,7 +49,7 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
         data, _ = load_tsf_file(path)
 
         super().__init__(
-            data.unsqueeze(0),
+            torch.from_numpy(data).unsqueeze(0),
             transform=transform,
             return_length=return_length,
         )

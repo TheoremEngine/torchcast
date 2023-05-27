@@ -1,6 +1,15 @@
 import os
-from setuptools import setup
-import shutil
+from setuptools import find_packages, setup
+
+from pybind11.setup_helpers import Pybind11Extension
+
+COMPILE_ARGS = [
+    '-Wall',
+    '-pedantic-errors',
+    '-Wextra',
+    '-Werror',
+    '-Wsign-conversion',
+]
 
 
 if __name__ == '__main__':
@@ -13,12 +22,22 @@ if __name__ == '__main__':
     with open(req_path, 'r') as reqs_file:
         requirements = list(reqs_file.readlines())
 
+    # Create pybind11 extension
+    ext_modules = [
+        Pybind11Extension(
+            'torchcast.datasets._C',
+            ['torchcast/csrc/file_readers.cpp'],
+            cxx_std="2a",
+            extra_compile_args=COMPILE_ARGS,
+        ),
+    ]
+
     setup(
         name='torchcast',
         version='0.1',
         author='Mark Lowell',
         author_email='MarkLowell@theorem-engine.org',
-        packages=['torchcast'],
-        setup_requires=requirements,
+        packages=find_packages(),
         install_requires=requirements,
+        ext_modules=ext_modules,
     )
