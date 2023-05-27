@@ -139,7 +139,7 @@ class SeriesDataset(torch.utils.data.Dataset):
     @property
     def _time_ranges(self) -> List[int]:
         return [
-            max(x[i].shape[1] for x in self.data)
+            max(x[i if x.shape[0] > 1 else 0].shape[1] for x in self.data)
             for i in range(self.shape[0])
         ]
 
