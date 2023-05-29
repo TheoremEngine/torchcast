@@ -50,6 +50,7 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
     def __init__(self, path: str, task: str = '15min', split: str = 'all',
                  download: Union[bool, str] = False,
                  transform: Optional[Callable] = None,
+                 input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
         '''
         Args:
@@ -64,6 +65,9 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
             not already available. Choices: True, False, 'force'.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
+            input_margin (optional, int): The amount of margin to include on
+            the left-hand side of the dataset, as it is used as an input to the
+            model.
             return_length (optional, int): If provided, the length of the
             sequence to return. If not provided, returns an entire sequence.
         '''
@@ -112,6 +116,8 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
             t_0, t_1 = DATA_SPLITS[split]
             if task.startswith('15min'):
                 t_0, t_1 = t_0 * 4, t_1 * 4
+            if split in {'val', 'test'}:
+                t_0 -= (input_margin or 0)
             dates = dates[:, :, t_0:t_1]
             pred = pred[:, :, t_0:t_1]
             target = target[:, :, t_0:t_1]

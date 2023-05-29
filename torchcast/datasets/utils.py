@@ -158,24 +158,30 @@ def _fetch_from_remote(url: str) -> BytesIO:
     return buff
 
 
-def _split_7_1_2(split: str, *tensors: torch.Tensor):
+def _split_7_1_2(split: str, input_length: Optional[int],
+                 *tensors: torch.Tensor):
     '''
     Replicates the train-val-test split used in Zeng et al. in most of their
-    datasets.
+    datasets. The first 70% will be allocated to the training set, the last 20%
+    will be the test set, and the remainder will be the validation set.
 
     Args:
         split (str): Split to return. Choices: 'all', 'train', 'val', 'test'.
+        input_length (optional, int): The length of sequences used in
+        prediction. If provided, then the val and test sets will include this
+        much margin on the left-hand side.
     '''
     if split in {'train', 'val', 'test'}:
+        input_length = input_length or 0
         num_all = max(x.shape[2] for x in tensors)
         num_train, num_test = int(0.7 * num_all), int(0.2 * num_all)
         num_val = num_all - (num_train + num_test)
         if split == 'train':
             t_0, t_1 = 0, num_train
         elif split == 'val':
-            t_0, t_1 = num_train, num_train + num_val
+            t_0, t_1 = num_train - input_length, num_train + num_val
         else:
-            t_0, t_1 = num_train + num_val, num_all
+            t_0, t_1 = num_train + num_val - input_length, num_all
         tensors = tuple(x[:, :, t_0:t_1] for x in tensors)
         return tensors if (len(tensors) > 1) else tensors[0]
 

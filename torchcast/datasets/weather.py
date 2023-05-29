@@ -36,6 +36,7 @@ class GermanWeatherDataset(TensorSeriesDataset):
                  site: Union[str, Iterable[str]] = 'beutenberg',
                  split: str = 'all', download: Union[bool, str] = False,
                  transform: Optional[Callable] = None,
+                 input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
         '''
         Args:
@@ -51,6 +52,9 @@ class GermanWeatherDataset(TensorSeriesDataset):
             not already available. Choices: True, False, 'force'.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
+            input_margin (optional, int): The amount of margin to include on
+            the left-hand side of the dataset, as it is used as an input to the
+            model.
             return_length (optional, int): If provided, the length of the
             sequence to return. If not provided, returns an entire sequence.
         '''
@@ -98,7 +102,7 @@ class GermanWeatherDataset(TensorSeriesDataset):
             data = data[0].reshape(1, *data[0].shape)
         data_meta = Metadata(name='Data', channel_names=channel_names)
 
-        dates, data = _split_7_1_2(split, dates, data)
+        dates, data = _split_7_1_2(split, input_margin, dates, data)
 
         super().__init__(
             dates, data,

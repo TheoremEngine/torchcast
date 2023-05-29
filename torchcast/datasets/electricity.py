@@ -26,6 +26,7 @@ class ElectricityLoadDataset(TensorSeriesDataset):
     def __init__(self, path: str, split: str = 'all',
                  download: Union[str, bool] = False,
                  transform: Optional[Callable] = None,
+                 input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
         '''
         Args:
@@ -36,6 +37,9 @@ class ElectricityLoadDataset(TensorSeriesDataset):
             already available.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
+            input_margin (optional, int): The amount of margin to include on
+            the left-hand side of the dataset, as it is used as an input to the
+            model.
             return_length (optional, int): If provided, the length of the
             sequence to return. If not provided, returns an entire sequence.
         '''
@@ -60,7 +64,7 @@ class ElectricityLoadDataset(TensorSeriesDataset):
         data = np.array(df, dtype=np.float32).T
         data = data.reshape(1, *data.shape)
 
-        date, data = _split_7_1_2(split, date, data)
+        date, data = _split_7_1_2(split, input_margin, date, data)
 
         super().__init__(
             date, data,

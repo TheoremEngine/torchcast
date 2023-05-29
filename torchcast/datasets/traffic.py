@@ -23,6 +23,7 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
     def __init__(self, path: str, split: str = 'all',
                  download: Union[str, bool] = False,
                  transform: Optional[Callable] = None,
+                 input_margin: Optional[int] = None,
                  return_length: Optional[int] = None):
         '''
         Args:
@@ -33,6 +34,9 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
             already available.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
+            input_margin (optional, int): The amount of margin to include on
+            the left-hand side of the dataset, as it is used as an input to the
+            model.
             return_length (optional, int): If provided, the length of the
             sequence to return. If not provided, returns an entire sequence.
         '''
@@ -51,7 +55,7 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
 
         data, _ = load_tsf_file(path)
         data = torch.from_numpy(data).unsqueeze(0)
-        data = _split_7_1_2(split, data)
+        data = _split_7_1_2(split, input_margin, data)
 
         super().__init__(
             data,

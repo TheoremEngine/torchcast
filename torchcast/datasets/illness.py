@@ -5,6 +5,9 @@ import numpy as np
 import pandas as pd
 
 from ..data import Metadata, TensorSeriesDataset
+from .utils import _split_7_1_2
+
+ILI_NAME = 'ILINet.csv'
 
 __all__ = ['ILIDataset']
 
@@ -20,16 +23,25 @@ class ILIDataset(TensorSeriesDataset):
     To download this dataset, click "Download Data". Unselect "WHO/NREVSS" and
     select the desired seasons, then click "Download Data".
     '''
-    def __init__(self, path: str, transform: Optional[Callable] = None,
+    def __init__(self, path: str, split: str = 'all',
+                 transform: Optional[Callable] = None,
+                 input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
         '''
         Args:
             path (str): Path to find the dataset at.
+            split (str): What split of the data to return. The splits are taken
+            from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
+            input_margin (optional, int): The amount of margin to include on
+            the left-hand side of the dataset, as it is used as an input to the
+            model.
             return_length (optional, int): If provided, the length of the
             sequence to return. If not provided, returns an entire sequence.
         '''
+        if os.path.isdir(path):
+            path = os.path.join(path, ILI_NAME)
         if not os.path.exists(path):
             raise FileNotFoundError(path)
 
@@ -48,6 +60,8 @@ class ILIDataset(TensorSeriesDataset):
             df[col] = df[col].astype(np.float32)
         data = np.array(df).T.reshape(1, 11, -1)
         data_meta = Metadata(name='Data', channel_names=df.columns)
+
+        date, data = _split_7_1_2(split, input_margin, date, data)
 
         super().__init__(
             date, data,
