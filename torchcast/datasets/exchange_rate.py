@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from ..data import TensorSeriesDataset
-from .utils import _download_and_extract
+from .utils import _download_and_extract, _split_7_1_2
 
 __all__ = ['ExchangeRateDataset']
 
@@ -21,13 +21,16 @@ class ExchangeRateDataset(TensorSeriesDataset):
 
         https://arxiv.org/abs/1703.07015
     '''
-    def __init__(self, path: str, download: Union[bool, str] = False,
+    def __init__(self, path: str, split: str = 'all',
+                 download: Union[bool, str] = False,
                  transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):
         '''
         Args:
             path (str): Path to find the dataset at. This should be a
             directory, as the dataset consists of two files.
+            split (str): What split of the data to return. The splits are taken
+            from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             download (bool or str): Whether to download the dataset if it is
             not already available. Choices: True, False, 'force'.
             transform (optional, callable): Pre-processing functions to apply
@@ -42,12 +45,17 @@ class ExchangeRateDataset(TensorSeriesDataset):
                 EXCHANGE_RATE_URL, path, file_name=EXCHANGE_RATE_FILE_NAME,
             )
         if os.path.exists(path):
-            df = pd.read_csv(path)
+            df = pd.read_csv(path, header=None)
         else:
-            df = pd.read_csv(EXCHANGE_RATE_URL)
+            df = pd.read_csv(EXCHANGE_RATE_URL, header=None)
 
         data = np.array(df, dtype=np.float32).T
         data = data.reshape(1, *data.shape)
+        # In the pre-processing applied by Zeng et al., the last two channels
+        # are swapped. To ensure replicability, we repeat that here.
+        data = data[:, [0, 1, 2, 3, 4, 5, 7, 6], :]
+
+        data = _split_7_1_2(split, data)
 
         super().__init__(
             data,

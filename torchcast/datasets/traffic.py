@@ -4,7 +4,7 @@ from typing import Callable, Optional, Union
 import torch
 
 from ..data import TensorSeriesDataset
-from .utils import _download_and_extract, load_tsf_file
+from .utils import _download_and_extract, load_tsf_file, _split_7_1_2
 
 __all__ = ['SanFranciscoTrafficDataset']
 
@@ -20,12 +20,15 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
 
     https://arxiv.org/abs/1703.07015
     '''
-    def __init__(self, path: str, download: Union[str, bool] = False,
+    def __init__(self, path: str, split: str = 'all',
+                 download: Union[str, bool] = False,
                  transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):
         '''
         Args:
             path (str): Path to find the dataset at.
+            split (str): What split of the data to return. The splits are taken
+            from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             download (bool): Whether to download the dataset if it is not
             already available.
             transform (optional, callable): Pre-processing functions to apply
@@ -47,9 +50,11 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
                 )
 
         data, _ = load_tsf_file(path)
+        data = torch.from_numpy(data).unsqueeze(0)
+        data = _split_7_1_2(split, data)
 
         super().__init__(
-            torch.from_numpy(data).unsqueeze(0),
+            data,
             transform=transform,
             return_length=return_length,
         )

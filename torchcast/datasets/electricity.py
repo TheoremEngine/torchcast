@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _download_and_extract
+from .utils import _download_and_extract, _split_7_1_2
 
 __all__ = ['ElectricityLoadDataset']
 
@@ -18,13 +18,20 @@ class ElectricityLoadDataset(TensorSeriesDataset):
     Electricity Load dataset from:
 
     https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014
+
+    This implementation is based on:
+
+        https://github.com/cure-lab/LTSF-Linear
     '''
-    def __init__(self, path: str, download: Union[str, bool] = False,
+    def __init__(self, path: str, split: str = 'all',
+                 download: Union[str, bool] = False,
                  transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):
         '''
         Args:
             path (str): Path to find the dataset at.
+            split (str): What split of the data to return. The splits are taken
+            from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             download (bool): Whether to download the dataset if it is not
             already available.
             transform (optional, callable): Pre-processing functions to apply
@@ -52,6 +59,8 @@ class ElectricityLoadDataset(TensorSeriesDataset):
 
         data = np.array(df, dtype=np.float32).T
         data = data.reshape(1, *data.shape)
+
+        date, data = _split_7_1_2(split, date, data)
 
         super().__init__(
             date, data,

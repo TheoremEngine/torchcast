@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _download_and_extract
+from .utils import _download_and_extract, _split_7_1_2
 
 __all__ = ['GermanWeatherDataset']
 
@@ -34,7 +34,7 @@ class GermanWeatherDataset(TensorSeriesDataset):
     '''
     def __init__(self, path: str, year: Union[int, Iterable[int]] = 2020,
                  site: Union[str, Iterable[str]] = 'beutenberg',
-                 download: Union[bool, str] = False,
+                 split: str = 'all', download: Union[bool, str] = False,
                  transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):
         '''
@@ -44,7 +44,9 @@ class GermanWeatherDataset(TensorSeriesDataset):
             year (int or iterable of int): The year or years of data to
             download. Choices: 2003 to present.
             site: (str or iterable of str): The site or sites of data to
-            download. Choices: 'beutenberg', 'saaleaue', 'versuchsbeete'.
+            retrieve. Choices: 'beutenberg', 'saaleaue', 'versuchsbeete'.
+            split (str): What split of the data to return. The splits are taken
+            from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             download (bool or str): Whether to download the dataset if it is
             not already available. Choices: True, False, 'force'.
             transform (optional, callable): Pre-processing functions to apply
@@ -86,8 +88,7 @@ class GermanWeatherDataset(TensorSeriesDataset):
             channel_names = list(df.columns)
             data.append(np.array(df, dtype=np.float32).T)
 
-        # This converts time to nanoseconds, and we want seconds.
-        dates = np.array(dates.astype(np.int64)) // 1_000_000_000
+        dates = np.array(dates.astype(np.int64))
         dates = dates.reshape(1, 1, dates.shape[0])
         date_meta = Metadata(name='Datetime')
 
@@ -96,6 +97,8 @@ class GermanWeatherDataset(TensorSeriesDataset):
         else:
             data = data[0].reshape(1, *data[0].shape)
         data_meta = Metadata(name='Data', channel_names=channel_names)
+
+        dates, data = _split_7_1_2(split, dates, data)
 
         super().__init__(
             dates, data,

@@ -51,8 +51,7 @@ class AirQualityDataset(TensorSeriesDataset):
         # Extract time.
         t = df.pop('Date') + ' ' + df.pop('Time')
         t = pd.to_datetime(t, format='%d/%m/%Y %H.%M.%S')
-        # This converts time to nanoseconds, and we want seconds.
-        t = torch.from_numpy(np.array(t.astype(np.int64))) // 1_000_000_000
+        t = torch.from_numpy(np.array(t.astype(np.int64)))
         # Coerce to NCT arrangement
         t = t.view(1, 1, -1)
         time_meta = Metadata(name='Datetime')

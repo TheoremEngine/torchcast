@@ -158,6 +158,34 @@ def _fetch_from_remote(url: str) -> BytesIO:
     return buff
 
 
+def _split_7_1_2(split: str, *tensors: torch.Tensor):
+    '''
+    Replicates the train-val-test split used in Zeng et al. in most of their
+    datasets.
+
+    Args:
+        split (str): Split to return. Choices: 'all', 'train', 'val', 'test'.
+    '''
+    if split in {'train', 'val', 'test'}:
+        num_all = max(x.shape[2] for x in tensors)
+        num_train, num_test = int(0.7 * num_all), int(0.2 * num_all)
+        num_val = num_all - (num_train + num_test)
+        if split == 'train':
+            t_0, t_1 = 0, num_train
+        elif split == 'val':
+            t_0, t_1 = num_train, num_train + num_val
+        else:
+            t_0, t_1 = num_train + num_val, num_all
+        tensors = tuple(x[:, :, t_0:t_1] for x in tensors)
+        return tensors if (len(tensors) > 1) else tensors[0]
+
+    elif split == 'all':
+        return tensors if (len(tensors) > 1) else tensors[0]
+
+    else:
+        raise ValueError(split)
+
+
 def _stack_mismatched_tensors(tensors: List[torch.Tensor]) -> torch.Tensor:
     '''
     Stacks a collection of :class:`torch.Tensor`s along the 0th dimension,
