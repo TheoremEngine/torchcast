@@ -25,8 +25,11 @@ if __name__ == '__main__':
     # Create pybind11 extension
     ext_modules = [
         Pybind11Extension(
-            'torchcast.datasets._C',
-            ['torchcast/csrc/file_readers.cpp'],
+            'torchcast.datasets._file_readers',
+            ['torchcast/csrc/file_readers.cpp',
+             'torchcast/csrc/utils.cpp',
+             'torchcast/csrc/ts_reader.cpp',
+             'torchcast/csrc/tsf_reader.cpp'],
             cxx_std="2a",
             extra_compile_args=COMPILE_ARGS,
         ),
