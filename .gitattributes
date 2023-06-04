@@ -1,0 +1,2 @@
+tests/data/* linguist-detectable=false
+tests/ltsf linguist-vendored
