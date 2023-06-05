@@ -1,4 +1,3 @@
-import os
 from typing import Callable, Optional, Union
 
 import numpy as np
@@ -47,14 +46,14 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
 
         https://github.com/cure-lab/LTSF-Linear
     '''
-    def __init__(self, path: str, task: str = '15min', split: str = 'all',
-                 download: Union[bool, str] = False,
+    def __init__(self, path: Optional[str] = None, task: str = '15min',
+                 split: str = 'all', download: Union[bool, str] = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
         '''
         Args:
-            path (str): Path to find the dataset at. This should be a
+            path (optional, str): Path to find the dataset at. This should be a
             directory, as the dataset consists of multiple files.
             task (str): Whether to retrieve the hourly dataset or the every 15
             minute dataset, and whether to retrieve one file or two. Choices:
@@ -78,18 +77,9 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
         file_names = ETT_FILE_NAMES[task]
 
         for name in file_names:
-            file_path = os.path.join(path, name)
             url = ETT_URL.format(name=name)
-            if (
-                (download == 'force') or
-                (download and (not os.path.exists(file_path)))
-            ):
-                _download_and_extract(url, file_path, file_name=name)
-
-            if os.path.exists(file_path):
-                dfs.append(pd.read_csv(file_path))
-            else:
-                dfs.append(pd.read_csv(url))
+            buff = _download_and_extract(url, name, path, download=download)
+            dfs.append(pd.read_csv(buff))
             dates = dfs[-1].pop('date')
 
         dates = pd.to_datetime(dates, format='%Y-%m-%d %H:%M:%S')

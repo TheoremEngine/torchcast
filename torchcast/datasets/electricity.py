@@ -1,4 +1,3 @@
-import os
 from typing import Callable, Optional, Union
 
 import numpy as np
@@ -23,14 +22,14 @@ class ElectricityLoadDataset(TensorSeriesDataset):
 
         https://github.com/cure-lab/LTSF-Linear
     '''
-    def __init__(self, path: str, split: str = 'all',
-                 download: Union[str, bool] = False,
+    def __init__(self, path: Optional[str] = None, split: str = 'all',
+                 download: Union[str, bool] = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
         '''
         Args:
-            path (str): Path to find the dataset at.
+            path (optional, str): Path to find the dataset at.
             split (str): What split of the data to return. The splits are taken
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             download (bool): Whether to download the dataset if it is not
@@ -43,20 +42,14 @@ class ElectricityLoadDataset(TensorSeriesDataset):
             return_length (optional, int): If provided, the length of the
             sequence to return. If not provided, returns an entire sequence.
         '''
-        if os.path.isdir(path):
-            path = os.path.join(path, ELECTRICITY_LOAD_FILE_NAME)
-        if (not os.path.exists(path)) or (download == 'force'):
-            if download:
-                path = _download_and_extract(
-                    ELECTRICITY_LOAD_URL, path,
-                    file_name=ELECTRICITY_LOAD_FILE_NAME
-                )
-            else:
-                raise FileNotFoundError(
-                    f'Electricity load dataset not found at: {path}'
-                )
+        buff = _download_and_extract(
+            ELECTRICITY_LOAD_URL,
+            ELECTRICITY_LOAD_FILE_NAME,
+            path,
+            download=download,
+        )
 
-        df = pd.read_csv(path, delimiter=';', decimal=',')
+        df = pd.read_csv(buff, delimiter=';', decimal=',')
 
         date = pd.to_datetime(df.pop('Unnamed: 0'), format='%Y-%m-%d %H:%M:%S')
         date = np.array(date, dtype=np.int64).reshape(1, 1, -1)

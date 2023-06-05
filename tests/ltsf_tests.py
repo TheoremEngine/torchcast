@@ -34,14 +34,9 @@ class ElectricityLoadDataset(unittest.TestCase):
         # These datasets do not appear to match.
         return
 
-        with tempfile.TemporaryDirectory() as temp_root:
-            with self.assertRaises(FileNotFoundError):
-                ds = tc.datasets.ElectricityLoadDataset(
-                    temp_root, download=False
-                )
-            ds = tc.datasets.ElectricityLoadDataset(
-                temp_root, download=True, return_length=432, split='train',
-            )
+        ds = tc.datasets.ElectricityLoadDataset(
+            download=True, return_length=432, split='train',
+        )
 
         ltsf_ds = Dataset_Custom(
             LTSF_DATA_ROOT,
@@ -119,10 +114,9 @@ class ETTDataset(unittest.TestCase):
         # We have copied some of the code into the subdirectory ltsf to assist.
 
         for i in [1, 2]:
-            # This should be able to retrieve the dataset without downloading.
             ds = tc.datasets.ElectricityTransformerDataset(
-                '.', task=f'hourly-{i}', download=False,
-                split='train', return_length=432,
+                task=f'hourly-{i}', download=True, split='train',
+                return_length=432
             )
 
             # Parameters are copied from argparser in run_longExp.py and
@@ -198,9 +192,8 @@ class ETTDataset(unittest.TestCase):
             return
 
         for i in [1, 2]:
-            # This should be able to retrieve the dataset without downloading.
             ds = tc.datasets.ElectricityTransformerDataset(
-                '.', task=f'15min-{i}', download=False,
+                task=f'15min-{i}', download=True,
                 split='train', return_length=432,
             )
 
@@ -273,10 +266,9 @@ class ExchangeRateDataset(unittest.TestCase):
             )
             return
 
-        with tempfile.TemporaryDirectory() as temp_root:
-            ds = tc.datasets.ExchangeRateDataset(
-                temp_root, download=True, split='train', return_length=432,
-            )
+        ds = tc.datasets.ExchangeRateDataset(
+            download=True, split='train', return_length=432,
+        )
 
         ltsf_ds = Dataset_Custom(
             LTSF_DATA_ROOT,
@@ -323,10 +315,9 @@ class GermanWeatherDataset(unittest.TestCase):
             )
             return
 
-        with tempfile.TemporaryDirectory() as temp_root:
-            ds = tc.datasets.GermanWeatherDataset(
-                temp_root, download=True, split='train', return_length=432,
-            )
+        ds = tc.datasets.GermanWeatherDataset(
+            download=True, split='train', return_length=432,
+        )
 
         ltsf_ds = Dataset_Custom(
             LTSF_DATA_ROOT,
@@ -385,6 +376,66 @@ class GermanWeatherDataset(unittest.TestCase):
         self.assertEqual(ds.metadata[1].series_names, None)
 
 
+"""
+class ILIDataset(unittest.TestCase):
+    def test_full_up(self):
+        if not os.path.exists(LTSF_DATA_ROOT):
+            warnings.warn(
+                'Cannot run ILIDataset.test_full_up; please download dataset '
+                'from https://github.com/cure-lab/LTSF-Linear and place in '
+                'tests/ltsf/data/'
+            )
+            return
+
+        if not os.path.exists(os.getenv('ILI_PATH', '')):
+            warnings.warn(
+                "Cannot run ILIDataset.test_full_up; please download dataset "
+                "from https://gis.cdc.gov/grasp/fluview/fluportaldashboard.html"
+                " and set the environment variable 'ILI_PATH' to point to it"
+            )
+            return
+
+        ds = tc.datasets.ILIDataset(
+            os.environ['ILI_PATH'], split='train', return_length=432
+        )
+
+        ltsf_ds = Dataset_Custom(
+            LTSF_DATA_ROOT,
+            # size=(seq_len, label_len, pred_len).
+            size=[336, 48, 96],
+            # 'M': multivariate predicting multivariate
+            features='M',
+            target='OT',
+            # timeenc=0 does not work.
+            timeenc=1,
+            # 'h': Hourly
+            freq='h',
+            flag='train',
+            # This is a change from the defaults. We do our scaling using a
+            # transform, so we want to verify that our values are
+            # consistent without the scaling.
+            scale=False,
+            data_path='traffic.csv',
+        )
+
+        self.assertEqual(len(ds), len(ltsf_ds))
+
+        # We do not store the datetimes here.
+
+        for t in [0, 1, len(ds) - 1]:
+            my_series = ds[t]
+            x, y, _, _ = ltsf_ds[t]
+            # Check values
+            x, y = torch.from_numpy(x), torch.from_numpy(y)
+            ltsf_series = torch.cat((x, y[48:, :]), dim=0).T.float()
+            self.assertTrue(torch.isclose(my_series, ltsf_series).all())
+
+        self.assertEqual(len(ds.data), 2)
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+"""
+
+
 class SanFranciscoTrafficDataset(unittest.TestCase):
     def test_full_up(self):
         if not os.path.exists(LTSF_DATA_ROOT):
@@ -395,14 +446,9 @@ class SanFranciscoTrafficDataset(unittest.TestCase):
             )
             return
 
-        with tempfile.TemporaryDirectory() as temp_root:
-            with self.assertRaises(FileNotFoundError):
-                ds = tc.datasets.SanFranciscoTrafficDataset(
-                    temp_root, download=False,
-                )
-            ds = tc.datasets.SanFranciscoTrafficDataset(
-                temp_root, download=True, split='train', return_length=432
-            )
+        ds = tc.datasets.SanFranciscoTrafficDataset(
+            download=True, split='train', return_length=432
+        )
 
         ltsf_ds = Dataset_Custom(
             LTSF_DATA_ROOT,

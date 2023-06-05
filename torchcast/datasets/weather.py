@@ -1,5 +1,4 @@
 from itertools import product
-import os
 from typing import Callable, Iterable, Optional, Union
 
 import numpy as np
@@ -32,15 +31,16 @@ class GermanWeatherDataset(TensorSeriesDataset):
 
     Which used only the data from Beutenberg in 2020.
     '''
-    def __init__(self, path: str, year: Union[int, Iterable[int]] = 2020,
+    def __init__(self, path: Optional[str] = None,
+                 year: Union[int, Iterable[int]] = 2020,
                  site: Union[str, Iterable[str]] = 'beutenberg',
-                 split: str = 'all', download: Union[bool, str] = False,
+                 split: str = 'all', download: Union[bool, str] = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
         '''
         Args:
-            path (str): Path to find the dataset at. This should be a
+            path (optional, str): Path to find the dataset at. This should be a
             directory, as the dataset consists of at least two files.
             year (int or iterable of int): The year or years of data to
             download. Choices: 2003 to present.
@@ -72,18 +72,10 @@ class GermanWeatherDataset(TensorSeriesDataset):
             for y, p in product(year, ['a', 'b']):
                 url = WEATHER_URL.format(site=s, year=y, part=p)
                 name = WEATHER_FILE_NAME.format(site=s, year=y, part=p)
-                file_path = os.path.join(path, name)
-
-                if (
-                    (download == 'force') or
-                    (download and (not os.path.exists(file_path)))
-                ):
-                    _download_and_extract(url, file_path, file_name=name)
-
-                if os.path.exists(file_path):
-                    dfs.append(pd.read_csv(file_path, encoding='ISO-8859-1'))
-                else:
-                    dfs.append(pd.read_csv(url, encoding='ISO-8859-1'))
+                buff = _download_and_extract(
+                    url, name, path, download=download, encoding='ISO-8859-1'
+                )
+                dfs.append(pd.read_csv(buff))
 
             df = pd.concat(dfs)
             dates = pd.to_datetime(

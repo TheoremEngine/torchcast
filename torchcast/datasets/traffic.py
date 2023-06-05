@@ -1,10 +1,10 @@
-import os
 from typing import Callable, Optional, Union
 
 import torch
 
 from ..data import TensorSeriesDataset
-from .utils import _download_and_extract, load_tsf_file, _split_7_1_2
+from ._file_readers import parse_tsf
+from .utils import _download_and_extract, _split_7_1_2
 
 __all__ = ['SanFranciscoTrafficDataset']
 
@@ -20,14 +20,14 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
 
     https://arxiv.org/abs/1703.07015
     '''
-    def __init__(self, path: str, split: str = 'all',
-                 download: Union[str, bool] = False,
+    def __init__(self, path: Optional[str] = None, split: str = 'all',
+                 download: Union[str, bool] = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = None,
                  return_length: Optional[int] = None):
         '''
         Args:
-            path (str): Path to find the dataset at.
+            path (optional, str): Path to find the dataset at.
             split (str): What split of the data to return. The splits are taken
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             download (bool): Whether to download the dataset if it is not
@@ -40,20 +40,14 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
             return_length (optional, int): If provided, the length of the
             sequence to return. If not provided, returns an entire sequence.
         '''
-        if os.path.isdir(path):
-            path = os.path.join(path, TRAFFIC_FILE_NAME)
-        if (not os.path.exists(path)) or (download == 'force'):
-            if download:
-                path = _download_and_extract(
-                    TRAFFIC_URL, path,
-                    file_name=TRAFFIC_FILE_NAME
-                )
-            else:
-                raise FileNotFoundError(
-                    f'San Francisco traffic dataset not found at: {path}'
-                )
+        buff = _download_and_extract(
+            TRAFFIC_URL,
+            TRAFFIC_FILE_NAME,
+            path,
+            download=download,
+        )
 
-        data, _ = load_tsf_file(path)
+        data, _ = parse_tsf(buff.read())
         data = torch.from_numpy(data).unsqueeze(0)
         data = _split_7_1_2(split, input_margin, data)
 

@@ -1,13 +1,12 @@
 import gzip
-from io import BytesIO
+from io import BytesIO, StringIO
 import lzma
 import os
 import re
 import tarfile
-from typing import List, Optional
+from typing import Callable, List, Optional, Union
 import zipfile
 
-import numpy as np
 import pandas as pd
 import requests
 import torch
@@ -37,36 +36,54 @@ def _add_missing_values(df: pd.DataFrame, **variables) -> pd.DataFrame:
     return df.reset_index()
 
 
-def _download_and_extract(url: str, local_path: str,
-                          file_name: Optional[str] = None) -> str:
+def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
+                          download: Union[bool, str] = True,
+                          fetcher: Optional[Callable] = None,
+                          encoding: str = 'utf-8') -> StringIO:
     '''
-    Convenience function to download a remote file, decompress it if necessary,
-    and write it to disk.
+    Convenience function to wrangle fetching a remote file. This will return
+    the file as a :class:`io.StringIO` object, fetching it if necessary. This
+    function is designed to work with files small enough to be held in memory.
 
     Args:
         url (str): The URL to download the data from.
-        local_path (str): The local path to put the extracted data in.
-        file_name (optional, str): If provided, only extract this file from the
-        downloaded archive.
-
-    Returns:
-        The path to the file written to disk.
+        file_name (str): Name of the file. This should be the desired file, not
+        the name of the zipped file, if the file is compressed.
+        local_path (optional, str): The local path to find the file, and put
+        the extracted data in if it needs to be fetched.
+        download (bool or str): Whether to download the file if it is not
+        present. Can be true, false, or 'force', in which case the file will be
+        redownloaded even if it is present locally.
+        encoding (str): Encoding of bytes object.
     '''
-    # First, infer whether local_path is a directory or the path of the file.
-    # Make sure target location exists.
-    if file_name is not None:
-        if local_path.endswith(file_name):
-            local_root = os.path.dirname(local_path)
-        else:
-            local_root = local_path
+    if local_path is not None:
+        # First, infer whether local_path is a directory or the path of the
+        # file. Make sure target location exists.
+        if os.path.basename(local_path) == file_name:
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        elif os.path.isdir(local_path):
             local_path = os.path.join(local_path, file_name)
-    else:
-        local_root = local_path
+        elif not os.path.exists(local_path):
+            os.makedirs(local_path, exist_ok=True)
+            local_path = os.path.join(local_path, file_name)
 
-    os.makedirs(local_root, exist_ok=True)
+        # If file is already present, open it and return.
+        if os.path.exists(local_path):
+            with open(local_path, 'r') as f:
+                return StringIO(f.read())
+        elif not download:
+            raise FileNotFoundError(local_path)
 
-    # Let's get that file!
-    buff = _fetch_from_remote(url)
+    elif not download:
+        # If download == False, but no local_path is provided, what are we to
+        # do?
+        raise ValueError('If download is false, local_path must be provided')
+
+    # If we reach here, the file is not available locally. So let's get that
+    # file!
+    if fetcher is None:
+        fetcher = _fetch_from_remote
+    buff = fetcher(url)
 
     # Extract, if needed.
     while True:
@@ -74,30 +91,30 @@ def _download_and_extract(url: str, local_path: str,
 
         if ext == '.gz':
             buff = BytesIO(gzip.decompress(buff.read()))
+            continue
         elif ext == '.xz':
             buff = BytesIO(lzma.decompress(buff.read()))
+            continue
         elif ext == '.tar':
             with tarfile.TarFile(fileobj=buff, mode='r') as tar_file:
-                if file_name is None:
-                    tar_file.extractall(local_root)
-                else:
-                    tar_file.extract(file_name, path=local_root)
-                return local_path
+                buff = BytesIO(tar_file.extractfile(file_name).read())
         elif ext == '.zip':
             with zipfile.ZipFile(buff) as zip_file:
-                if file_name is None:
-                    zip_file.extractall(local_root)
-                else:
-                    zip_file.extract(file_name, path=local_root)
-                return local_path
-        else:
-            if file_name is None:
-                file_name = os.path.basename(url + ext)
-            if not local_path.endswith(file_name):
-                local_path = os.path.join(local_root, file_name)
-            with open(local_path, 'wb') as out_file:
-                out_file.write(buff.read())
-            return local_path
+                buff = BytesIO(zip_file.read(file_name))
+
+        break
+
+    # Convert from bytes to string
+    buff.seek(0)
+    buff = StringIO(buff.read().decode(encoding))
+
+    # If local_path is provided, write to disk
+    if local_path is not None:
+        with open(local_path, 'w') as out_file:
+            out_file.write(buff.read())
+        buff.seek(0)
+
+    return buff
 
 
 def _fetch_from_google_drive(doc_id: str) -> BytesIO:
