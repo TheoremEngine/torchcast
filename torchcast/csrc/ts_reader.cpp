@@ -13,7 +13,7 @@ namespace py = pybind11;
 
 
 std::string_view inline parse_label(std::string_view& buff_view,
-                                    std::vector<int>& class_labels,
+                                    std::vector<long int>& class_labels,
                                     const std::vector<std::string>& class_names)
 {
     // Parses a buffer to extract the class label, trimming the buffer to leave
@@ -47,7 +47,7 @@ std::string_view inline parse_label(std::string_view& buff_view,
     for(size_t i = 0; i < class_names.size(); i++)
         if (label == class_names[i])
         {
-            class_labels.push_back(static_cast<int>(i));
+            class_labels.push_back(static_cast<long int>(i));
             return buff_view;
         }
 
@@ -63,7 +63,7 @@ std::string_view inline parse_label(std::string_view& buff_view,
 
 py::object parse_ts_body_sparse(std::istream& reader, const bool has_classes,
                                 const std::vector<std::string>& class_names,
-                                std::vector<int>& class_labels,
+                                std::vector<long int>& class_labels,
                                 const size_t n_t, const size_t n_dim,
                                 const bool allow_missing)
 {
@@ -176,7 +176,7 @@ py::object parse_ts_body_sparse(std::istream& reader, const bool has_classes,
 
 py::object parse_ts_body_dense(std::istream& reader, const bool has_classes,
                                const std::vector<std::string>& class_names,
-                               std::vector<int>& class_labels,
+                               std::vector<long int>& class_labels,
                                const size_t n_t, const size_t n_dim,
                                const bool allow_missing,
                                const bool equal_length)
@@ -274,7 +274,7 @@ py::tuple parse_ts_stream(std::istream& reader)
     // Whether it uses class labels
     bool has_classes { false };
     // If it uses class labels, this will keep track of what label each row is.
-    std::vector<int> class_labels {};
+    std::vector<long int> class_labels {};
     // Whether each row must be equal length.
     bool equal_length { false };
     // Whether missing variables are allowed.
@@ -341,7 +341,14 @@ py::tuple parse_ts_stream(std::istream& reader)
 
     // Add class labels to rtn_dict
     if (has_classes)
-        rtn_dict["labels"] = class_labels;
+    {
+        std::vector<ssize_t> shape {
+            static_cast<ssize_t>(class_labels.size())
+        };
+        py::dtype dtype { "int64" };
+        py::array rtn_labels { dtype, shape, class_labels.data() };
+        rtn_dict["labels"] = rtn_labels;
+    }
 
     return py::make_tuple(rtn_series, rtn_dict);
 }
