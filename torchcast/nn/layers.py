@@ -2,9 +2,7 @@ import math
 
 import torch
 
-__all__ = [
-    'NaNEncoder', 'TimeEmbedding', 'TransformerLayer',
-]
+__all__ = ['NaNEncoder', 'TimeEmbedding', 'TransformerLayer']
 
 
 class NaNEncoder(torch.nn.Module):
@@ -18,7 +16,7 @@ class NaNEncoder(torch.nn.Module):
         This method expects to receive tensors in NCT arrangement.
         '''
         is_nan = torch.isnan(x)
-        x[is_nan] = torch.rand_like(x[is_nan], dtype=torch.float32)
+        x[is_nan] = 0
         return torch.cat((x, is_nan.to(x.dtype)), dim=1)
 
 
