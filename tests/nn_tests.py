@@ -75,5 +75,20 @@ class LayersTest(unittest.TestCase):
         self.assertTrue((out[0, 2:, :] == mask).all())
 
 
+class TransformerTest(unittest.TestCase):
+    def test_encoder_transformer(self):
+        # Smoke test only
+        net = tc.nn.EncoderTransformer(
+            3, 32, 4, num_classes=10, num_output_channels=3,
+            one_hot_encode_nan_inputs=True
+        )
+        net = net.cuda()
+        x = torch.randn((5, 3, 8), device='cuda')
+        cls_pred, out = net(x)
+
+        self.assertEqual(cls_pred.shape, (5, 10))
+        self.assertEqual(out.shape, (5, 3, 8))
+
+
 if __name__ == '__main__':
     unittest.main()
