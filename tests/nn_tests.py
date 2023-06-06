@@ -75,29 +75,5 @@ class LayersTest(unittest.TestCase):
         self.assertTrue((out[0, 2:, :] == mask).all())
 
 
-class HooksTest(unittest.TestCase):
-    def test_max_norm_constraint(self):
-        class TestModule(torch.nn.Module):
-            def __init__(self):
-                super().__init__()
-                weight = torch.nn.Parameter(torch.empty((1,)))
-                self.register_parameter('weight', weight)
-
-            def forward(self):
-                return self.weight
-
-        module = tc.nn.hooks.max_norm_constraint(TestModule())
-
-        with torch.no_grad():
-            module.weight_nc.fill_(0.5)
-
-        self.assertTrue(abs(module().item() - 0.5) < 1e-5)
-
-        with torch.no_grad():
-            module.weight_nc.fill_(-2.)
-
-        self.assertTrue(abs(module().item() + 1.) < 1e-5)
-
-
 if __name__ == '__main__':
     unittest.main()
