@@ -48,7 +48,7 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
         )
 
         data, _ = parse_tsf(buff.read())
-        data = torch.from_numpy(data).unsqueeze(0)
+        data = torch.from_numpy(data).permute(1, 0, 2)
         data = _split_7_1_2(split, input_margin, data)
 
         super().__init__(
