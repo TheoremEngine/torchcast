@@ -8,17 +8,22 @@ from .utils import _download_and_extract, _split_7_1_2
 
 __all__ = ['ElectricityLoadDataset']
 
-ELECTRICITY_LOAD_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00321/LD2011_2014.txt.zip'  # noqa
-ELECTRICITY_LOAD_FILE_NAME = 'LD2011_2014.txt'
+ELECTRICITY_LOAD_URL = 'https://github.com/laiguokun/multivariate-time-series-data/raw/master/electricity/electricity.txt.gz'  # noqa
+ELECTRICITY_LOAD_FILE_NAME = 'electricity.txt'
 
 
 class ElectricityLoadDataset(TensorSeriesDataset):
     '''
-    Electricity Load dataset from:
+    Electricity Load dataset, obtained from:
 
-    https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014
+        https://github.com/laiguokun/multivariate-time-series-data
 
-    This implementation is based on:
+    This is derived from:
+
+        https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014
+
+    But the data has been subsetted and pre-processed. This implementation is
+    based on:
 
         https://github.com/cure-lab/LTSF-Linear
     '''
@@ -49,20 +54,15 @@ class ElectricityLoadDataset(TensorSeriesDataset):
             download=download,
         )
 
-        df = pd.read_csv(buff, delimiter=';', decimal=',')
-
-        date = pd.to_datetime(df.pop('Unnamed: 0'), format='%Y-%m-%d %H:%M:%S')
-        date = np.array(date, dtype=np.int64).reshape(1, 1, -1)
+        df = pd.read_csv(buff, header=None)
 
         data = np.array(df, dtype=np.float32).T
         data = data.reshape(1, *data.shape)
 
-        date, data = _split_7_1_2(split, input_margin, date, data)
+        data = _split_7_1_2(split, input_margin, data)
 
         super().__init__(
-            date, data,
+            data,
             transform=transform,
             return_length=return_length,
-            metadata=[Metadata(name='Datetime'),
-                      Metadata(name='Electricity Load')],
         )

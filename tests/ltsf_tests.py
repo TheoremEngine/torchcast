@@ -31,9 +31,6 @@ LTSF_DATA_ROOT = os.path.abspath(os.path.join(__file__, '../ltsf/data/'))
 
 class ElectricityLoadDataset(unittest.TestCase):
     def test_full_up(self):
-        # These datasets do not appear to match.
-        return
-
         ds = tc.datasets.ElectricityLoadDataset(
             download=True, return_length=432, split='train',
         )
@@ -60,39 +57,15 @@ class ElectricityLoadDataset(unittest.TestCase):
         self.assertEqual(len(ds), len(ltsf_ds))
 
         for t in [0, 1, len(ds) - 1]:
-            my_dates, my_series = ds[t]
-            x, y, x_date, y_date = ltsf_ds[t]
+            my_series = ds[t]
+            x, y, _, _ = ltsf_ds[t]
             # Check values
             x, y = torch.from_numpy(x), torch.from_numpy(y)
             ltsf_series = torch.cat((x, y[48:, :]), dim=0).T.float()
             self.assertTrue(torch.isclose(my_series, ltsf_series).all())
-            # Check dates. Note we cannot check year.
-            ltsf_dates = np.concatenate((x_date, y_date[48:, :]), axis=0)
-            ltsf_dates = [
-                [round(365 * (d[3] + 0.5) + 1), round(23 * (d[0] + 0.5))]
-                for d in ltsf_dates
-            ]
-            my_dates = pd.to_datetime(my_dates.squeeze().numpy())
-            my_dates = np.stack(
-                (my_dates.day_of_year.values, my_dates.hour.values),
-                axis=1
-            )
-            my_dates = my_dates.tolist()
-            self.assertEqual(ltsf_dates, my_dates)
 
-        self.assertEqual(len(ds.data), 2)
-        self.assertEqual(ds.data[0].dtype, torch.int64)
-        self.assertEqual(ds.data[1].dtype, torch.float32)
-
-        # Check metadata
-        self.assertTrue(isinstance(ds.metadata, list))
-        self.assertEqual(len(ds.metadata), 2)
-        self.assertEqual(ds.metadata[0].name, 'Datetime')
-        self.assertEqual(ds.metadata[0].channel_names, None)
-        self.assertEqual(ds.metadata[0].series_names, None)
-        self.assertEqual(ds.metadata[1].name, 'Electricity Load')
-        self.assertEqual(ds.metadata[1].channel_names, None)
-        self.assertEqual(ds.metadata[1].series_names, None)
+        self.assertEqual(len(ds.data), 1)
+        self.assertEqual(ds.data[0].dtype, torch.float32)
 
 
 class ETTDataset(unittest.TestCase):
