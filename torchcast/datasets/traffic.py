@@ -21,7 +21,7 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
     https://arxiv.org/abs/1703.07015
     '''
     def __init__(self, path: Optional[str] = None, split: str = 'all',
-                 download: Union[str, bool] = True,
+                 scale: bool = True, download: Union[str, bool] = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = None,
                  return_length: Optional[int] = None):
@@ -32,6 +32,7 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             download (bool): Whether to download the dataset if it is not
             already available.
+            scale (bool): Whether to normalize the data, as in the benchmark.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
             input_margin (optional, int): The amount of margin to include on
@@ -49,6 +50,12 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
 
         data, _ = parse_tsf(buff.read())
         data = torch.from_numpy(data).permute(1, 0, 2)
+
+        if scale:
+            train_data = _split_7_1_2('train', input_margin, data)
+            mean, std = train_data.mean((0, 2)), train_data.std((0, 2))
+            data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
+
         data = _split_7_1_2(split, input_margin, data)
 
         super().__init__(

@@ -23,7 +23,7 @@ class ILIDataset(TensorSeriesDataset):
     To download this dataset, click "Download Data". Unselect "WHO/NREVSS" and
     select the desired seasons, then click "Download Data".
     '''
-    def __init__(self, path: str, split: str = 'all',
+    def __init__(self, path: str, split: str = 'all', scale: bool = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
@@ -32,6 +32,7 @@ class ILIDataset(TensorSeriesDataset):
             path (str): Path to find the dataset at.
             split (str): What split of the data to return. The splits are taken
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
+            scale (bool): Whether to normalize the data, as in the benchmark.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
             input_margin (optional, int): The amount of margin to include on
@@ -60,6 +61,11 @@ class ILIDataset(TensorSeriesDataset):
             df[col] = df[col].astype(np.float32)
         data = np.array(df).T.reshape(1, 11, -1)
         data_meta = Metadata(name='Data', channel_names=df.columns)
+
+        if scale:
+            train_data = _split_7_1_2('train', input_margin, data)
+            mean, std = train_data.mean((0, 2)), train_data.std((0, 2))
+            data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
 
         date, data = _split_7_1_2(split, input_margin, date, data)
 

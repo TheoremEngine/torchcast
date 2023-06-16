@@ -47,7 +47,8 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
         https://github.com/cure-lab/LTSF-Linear
     '''
     def __init__(self, path: Optional[str] = None, task: str = '15min',
-                 split: str = 'all', download: Union[bool, str] = True,
+                 split: str = 'all', scale: bool = True,
+                 download: Union[bool, str] = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
@@ -60,6 +61,7 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
             'hourly', 'hourly-1', 'hourly-2', '15min', '15min-1', '15min-2'.
             split (str): What split of the data to return. The splits are taken
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
+            scale (bool): Whether to normalize the data, as in the benchmark.
             download (bool or str): Whether to download the dataset if it is
             not already available. Choices: True, False, 'force'.
             transform (optional, callable): Pre-processing functions to apply
@@ -100,6 +102,17 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
             name='Predictors',
             channel_names=channel_names,
         )
+
+        if scale:
+            t_0, t_1 = DATA_SPLITS['train']
+            if task.startswith('15min'):
+                t_0, t_1 = t_0 * 4, t_1 * 4
+            pred_mean = pred[:, :, t_0:t_1].mean((0, 2)).reshape(1, -1, 1)
+            pred_std = pred[:, :, t_0:t_1].std((0, 2)).reshape(1, -1, 1)
+            pred = (pred - pred_mean) / pred_std
+            target_mean = target[:, :, t_0:t_1].mean((0, 2)).reshape(1, -1, 1)
+            target_std = target[:, :, t_0:t_1].std((0, 2)).reshape(1, -1, 1)
+            target = (target - target_mean) / target_std
 
         # This uses a custom split, unlike the other datasets from Zeng et al.
         if split in {'train', 'val', 'test'}:

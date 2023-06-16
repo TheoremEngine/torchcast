@@ -21,7 +21,7 @@ class ExchangeRateDataset(TensorSeriesDataset):
         https://arxiv.org/abs/1703.07015
     '''
     def __init__(self, path: Optional[str] = None, split: str = 'all',
-                 download: Union[bool, str] = True,
+                 scale: bool = True, download: Union[bool, str] = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = None,
                  return_length: Optional[int] = None):
@@ -30,6 +30,7 @@ class ExchangeRateDataset(TensorSeriesDataset):
             path (optional, str): Path to find the dataset at.
             split (str): What split of the data to return. The splits are taken
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
+            scale (bool): Whether to normalize the data, as in the benchmark.
             download (bool or str): Whether to download the dataset if it is
             not already available. Choices: True, False, 'force'.
             transform (optional, callable): Pre-processing functions to apply
@@ -54,6 +55,11 @@ class ExchangeRateDataset(TensorSeriesDataset):
         # In the pre-processing applied by Zeng et al., the last two channels
         # are swapped. To ensure replicability, we repeat that here.
         data = data[:, [0, 1, 2, 3, 4, 5, 7, 6], :]
+
+        if scale:
+            train_data = _split_7_1_2('train', input_margin, data)
+            mean, std = train_data.mean((0, 2)), train_data.std((0, 2))
+            data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
 
         data = _split_7_1_2(split, input_margin, data)
 

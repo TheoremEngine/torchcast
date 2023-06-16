@@ -34,7 +34,8 @@ class GermanWeatherDataset(TensorSeriesDataset):
     def __init__(self, path: Optional[str] = None,
                  year: Union[int, Iterable[int]] = 2020,
                  site: Union[str, Iterable[str]] = 'beutenberg',
-                 split: str = 'all', download: Union[bool, str] = True,
+                 split: str = 'all', scale: bool = True,
+                 download: Union[bool, str] = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
@@ -48,6 +49,7 @@ class GermanWeatherDataset(TensorSeriesDataset):
             retrieve. Choices: 'beutenberg', 'saaleaue', 'versuchsbeete'.
             split (str): What split of the data to return. The splits are taken
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
+            scale (bool): Whether to normalize the data, as in the benchmark.
             download (bool or str): Whether to download the dataset if it is
             not already available. Choices: True, False, 'force'.
             transform (optional, callable): Pre-processing functions to apply
@@ -92,6 +94,12 @@ class GermanWeatherDataset(TensorSeriesDataset):
             data = np.stack(data, axis=0)
         else:
             data = data[0].reshape(1, *data[0].shape)
+
+        if scale:
+            train_data = _split_7_1_2('train', input_margin, data)
+            mean, std = train_data.mean((0, 2)), train_data.std((0, 2))
+            data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
+
         data_meta = Metadata(name='Data', channel_names=channel_names)
 
         dates, data = _split_7_1_2(split, input_margin, dates, data)

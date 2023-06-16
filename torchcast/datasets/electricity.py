@@ -3,7 +3,7 @@ from typing import Callable, Optional, Union
 import numpy as np
 import pandas as pd
 
-from ..data import Metadata, TensorSeriesDataset
+from ..data import TensorSeriesDataset
 from .utils import _download_and_extract, _split_7_1_2
 
 __all__ = ['ElectricityLoadDataset']
@@ -28,7 +28,7 @@ class ElectricityLoadDataset(TensorSeriesDataset):
         https://github.com/cure-lab/LTSF-Linear
     '''
     def __init__(self, path: Optional[str] = None, split: str = 'all',
-                 download: Union[str, bool] = True,
+                 download: Union[str, bool] = True, scale: bool = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
@@ -39,6 +39,7 @@ class ElectricityLoadDataset(TensorSeriesDataset):
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             download (bool): Whether to download the dataset if it is not
             already available.
+            scale (bool): Whether to normalize the data, as in the benchmark.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
             input_margin (optional, int): The amount of margin to include on
@@ -58,6 +59,11 @@ class ElectricityLoadDataset(TensorSeriesDataset):
 
         data = np.array(df, dtype=np.float32).T
         data = data.reshape(1, *data.shape)
+
+        if scale:
+            train_data = _split_7_1_2('train', input_margin, data)
+            mean, std = train_data.mean((0, 2)), train_data.std((0, 2))
+            data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
 
         data = _split_7_1_2(split, input_margin, data)
 

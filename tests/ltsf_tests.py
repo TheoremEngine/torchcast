@@ -32,7 +32,7 @@ LTSF_DATA_ROOT = os.path.abspath(os.path.join(__file__, '../ltsf/data/'))
 class ElectricityLoadDataset(unittest.TestCase):
     def test_full_up(self):
         ds = tc.datasets.ElectricityLoadDataset(
-            download=True, return_length=432, split='train',
+            download=True, return_length=432, split='train', scale=False,
         )
 
         ltsf_ds = Dataset_Custom(
@@ -89,7 +89,7 @@ class ETTDataset(unittest.TestCase):
         for i in [1, 2]:
             ds = tc.datasets.ElectricityTransformerDataset(
                 task=f'hourly-{i}', download=True, split='train',
-                return_length=432
+                return_length=432, scale=False,
             )
 
             # Parameters are copied from argparser in run_longExp.py and
@@ -167,7 +167,7 @@ class ETTDataset(unittest.TestCase):
         for i in [1, 2]:
             ds = tc.datasets.ElectricityTransformerDataset(
                 task=f'15min-{i}', download=True,
-                split='train', return_length=432,
+                split='train', return_length=432, scale=False,
             )
 
             # Parameters are copied from argparser in run_longExp.py and
@@ -240,7 +240,7 @@ class ExchangeRateDataset(unittest.TestCase):
             return
 
         ds = tc.datasets.ExchangeRateDataset(
-            download=True, split='train', return_length=432,
+            download=True, split='train', return_length=432, scale=False,
         )
 
         ltsf_ds = Dataset_Custom(
@@ -289,7 +289,7 @@ class GermanWeatherDataset(unittest.TestCase):
             return
 
         ds = tc.datasets.GermanWeatherDataset(
-            download=True, split='train', return_length=432,
+            download=True, split='train', return_length=432, scale=False,
         )
 
         ltsf_ds = Dataset_Custom(
@@ -369,7 +369,8 @@ class ILIDataset(unittest.TestCase):
             return
 
         ds = tc.datasets.ILIDataset(
-            os.environ['ILI_PATH'], split='train', return_length=432
+            os.environ['ILI_PATH'], split='train', return_length=432,
+            scale=False,
         )
 
         ltsf_ds = Dataset_Custom(
@@ -420,7 +421,7 @@ class SanFranciscoTrafficDataset(unittest.TestCase):
             return
 
         ds = tc.datasets.SanFranciscoTrafficDataset(
-            download=True, split='train', return_length=432
+            download=True, split='train', return_length=432, scale=False,
         )
 
         ltsf_ds = Dataset_Custom(
