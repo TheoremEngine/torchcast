@@ -61,7 +61,7 @@ class CriteriaTest(unittest.TestCase):
 
 
 class LayersTest(unittest.TestCase):
-    # TODO: Add tests for TimeEmbedding, TransformerLayer
+    # TODO: Add tests for TimeEmbedding
     def test_nan_encoder(self):
         x = torch.tensor([[[0.5, float('nan')], [float('nan'), -0.5]]])
         encoder = tc.nn.NaNEncoder()
@@ -75,12 +75,23 @@ class LayersTest(unittest.TestCase):
         self.assertTrue((out[0, 2:, :] == mask).all())
 
 
-class TransformerTest(unittest.TestCase):
+class ModelsTest(unittest.TestCase):
+    def test_encoder_decoder_transformer(self):
+        # Smoke test only
+        net = tc.nn.EncoderDecoderTransformer(
+            3, 32, 2, 2, predict_ahead=8, one_hot_encode_nan_inputs=True
+        )
+        net = net.cuda()
+        x = torch.randn((5, 3, 8), device='cuda')
+        out = net(x)
+
+        self.assertEqual(out.shape, (5, 3, 8))
+
     def test_encoder_transformer(self):
         # Smoke test only
         net = tc.nn.EncoderTransformer(
-            3, 32, 4, num_classes=10, num_output_channels=3,
-            one_hot_encode_nan_inputs=True
+            3, 32, 4, predict_ahead=8, num_classes=10,
+           one_hot_encode_nan_inputs=True
         )
         net = net.cuda()
         x = torch.randn((5, 3, 8), device='cuda')

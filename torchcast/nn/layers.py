@@ -2,7 +2,7 @@ import math
 
 import torch
 
-__all__ = ['NaNEncoder', 'TimeEmbedding', 'TransformerLayer']
+__all__ = ['NaNEncoder', 'TimeEmbedding']
 
 
 class NaNEncoder(torch.nn.Module):
@@ -45,54 +45,3 @@ class TimeEmbedding(torch.nn.Module):
         if x.shape[2] > self.time_embedding.shape[2]:
             raise ValueError('Length of sequences exceed maximum value')
         return x + self.time_embedding[:, :, :x.shape[2]]
-
-
-class TransformerLayer(torch.nn.Module):
-    '''
-    This :class:`torch.nn.Module` replaces `torch.nn.TransformerDecoderLayer`,
-    providing a module that consists of a single encoder layer incorporating
-    self-attention and feed-forward layer.
-    '''
-    def __init__(self, dim: int, num_heads: int, hidden_dim: int,
-                 dropout: float = 0.1):
-        '''
-        Args:
-            dim (int): Channel dimension of the input.
-            num_heads (int): Number of attention heads.
-            hidden_dim (int): Channel dimension of the hidden layers.
-            dropout (float): Dropout probability.
-        '''
-        super().__init__()
-
-        # Implementation of self-attention component
-        self.self_attn = torch.nn.MultiheadAttention(
-            dim, num_heads, dropout=dropout, batch_first=True
-        )
-        self.drop = torch.nn.Dropout(dropout)
-        self.norm1 = torch.nn.LayerNorm(dim)
-
-        # Implementation of feed-forward component
-        self.ff_block = torch.nn.Sequential(
-            torch.nn.Linear(dim, hidden_dim),
-            torch.nn.ReLU(True),
-            torch.nn.Dropout(dropout),
-            torch.nn.Linear(hidden_dim, dim),
-            torch.nn.Dropout(dropout),
-        )
-        self.norm2 = torch.nn.LayerNorm(dim)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        '''
-        Args:
-            x (:class:`torch.Tensor`): The input sequence to be decoded. This
-            should be in arrangement NCT.
-        '''
-        # Permute NCT -> NTC
-        x = x.permute(0, 2, 1)
-        # Self-attention component
-        x = x + self.drop(self.self_attn(x, x, x, need_weights=False)[0])
-        # Feed-forward component
-        x = self.norm2(x + self.ff_block(self.norm1(x)))
-        # Permute NTC -> NCT
-        x = x.permute(0, 2, 1)
-        return x
