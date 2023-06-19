@@ -2,7 +2,7 @@ from typing import Callable, Optional, Union
 
 import torch
 
-from .layers import NaNEncoder, TimeEmbedding, TimeLastLayerNorm
+from .layers import NaNEncoder, PositionEmbedding, TimeLastLayerNorm
 from .transformers import Decoder, Encoder
 
 __all__ = ['EncoderDecoderTransformer', 'EncoderTransformer']
@@ -17,6 +17,7 @@ class EncoderDecoderTransformer(torch.nn.Module):
                  num_encoder_layers: int, num_decoder_layers: int,
                  exogenous_dim: int = 0, num_heads: int = 8,
                  one_hot_encode_nan_inputs: bool = False, dropout: float = 0.1,
+                 embedding: Optional[torch.nn.Module] = None,
                  norm: Callable = TimeLastLayerNorm):
         '''
         Args:
@@ -35,6 +36,8 @@ class EncoderDecoderTransformer(torch.nn.Module):
             inputs, and use one-hot encoding prior to the projection to handle
             them.
             dropout (float): Dropout probability.
+            embedding (optional, :class:`torch.nn.Module`): A time embedding
+            layer. If not provided, a :class:`PositionEmbedding` will be used.
             norm (callable): A function for constructing a normalization layer.
             This should expect the dimension as an argument and return the
             layer.
@@ -47,7 +50,9 @@ class EncoderDecoderTransformer(torch.nn.Module):
         self.nan_encoder = NaNEncoder() if one_hot_encode_nan_inputs else None
         m = 2 if one_hot_encode_nan_inputs else 1
         self.proj = torch.nn.Conv1d(m * in_dim, hidden_dim, 1)
-        self.time_embedding = TimeEmbedding(hidden_dim)
+        if embedding is None:
+            embedding = PositionEmbedding(hidden_dim)
+        self.embedding = embedding
         self.encoder = Encoder(
             hidden_dim, num_encoder_layers, num_heads=num_heads,
             dropout=dropout, norm=norm
@@ -67,18 +72,19 @@ class EncoderDecoderTransformer(torch.nn.Module):
         self.out = torch.nn.Conv1d(hidden_dim, out_dim, 1)
         self.mask_token = torch.nn.Parameter(torch.randn(hidden_dim))
 
-        self._init()
+        with torch.no_grad():
+            self._init()
 
     def _init(self):
-        with torch.no_grad():
-            for layer in [self.proj, self.proj_exogenous, self.out]:
-                if layer is not None:
-                    torch.nn.init.kaiming_normal_(layer.weight)
-                    torch.nn.init.zeros_(layer.bias)
+        for layer in [self.proj, self.proj_exogenous, self.out]:
+            if layer is not None:
+                torch.nn.init.kaiming_normal_(layer.weight)
+                torch.nn.init.zeros_(layer.bias)
 
-            self.out.weight /= 8.
-            self.encoder._init()
-            self.decoder._init()
+        self.out.weight /= 8.
+        self.encoder._init()
+        self.decoder._init()
+        self.embedding._init()
 
     def forward(self, x_in: torch.Tensor, t_in: Optional[torch.Tensor] = None,
                 x_out: Optional[torch.Tensor] = None,
@@ -110,7 +116,7 @@ class EncoderDecoderTransformer(torch.nn.Module):
             t_in = torch.arange(x_in.shape[2], device=x_in.device)
             t_in = t_in.view(1, 1, -1).repeat(x_in.shape[0], 1, 1)
 
-        x_in = self.time_embedding(x_in, t_in)
+        x_in = self.embedding(x_in, t_in)
 
         # Prep tokens to input into decoder
         if t_out is None and x_out is None:
@@ -139,7 +145,7 @@ class EncoderDecoderTransformer(torch.nn.Module):
         else:
             x_out = mask
 
-        x_out = self.time_embedding(x_out, t_out)
+        x_out = self.embedding(x_out, t_out)
 
         # Now that the tokens are prepped, pass through the encoder.
         encoder_x = self.encoder(x_in)
@@ -158,6 +164,7 @@ class EncoderTransformer(torch.nn.Module):
                  num_encoder_layers: int, num_classes: int = 0,
                  exogenous_dim: int = 0, num_heads: int = 8,
                  one_hot_encode_nan_inputs: bool = False, dropout: float = 0.1,
+                 embedding: Optional[torch.nn.Module] = None,
                  norm: Callable = TimeLastLayerNorm):
         '''
         Args:
@@ -176,6 +183,8 @@ class EncoderTransformer(torch.nn.Module):
             inputs, and use one-hot encoding prior to the projection to handle
             them.
             dropout (float): Dropout probability.
+            embedding (optional, :class:`torch.nn.Module`): A time embedding
+            layer. If not provided, a :class:`PositionEmbedding` will be used.
             norm (callable): A function for constructing a normalization layer.
             This should expect the dimension as an argument and return the
             layer.
@@ -185,7 +194,9 @@ class EncoderTransformer(torch.nn.Module):
         self.nan_encoder = NaNEncoder() if one_hot_encode_nan_inputs else None
         m = 2 if one_hot_encode_nan_inputs else 1
         self.proj = torch.nn.Conv1d(m * in_dim, hidden_dim, 1)
-        self.time_embedding = TimeEmbedding(hidden_dim)
+        if embedding is None:
+            embedding = PositionEmbedding(hidden_dim)
+        self.embedding = embedding
         self.main = Encoder(
             hidden_dim, num_encoder_layers, num_heads=num_heads,
             dropout=dropout, norm=norm,
@@ -212,23 +223,24 @@ class EncoderTransformer(torch.nn.Module):
         else:
             self.class_token = self.class_proj = None
 
-        self._init()
+        with torch.no_grad():
+            self._init()
 
     def _init(self):
-        with torch.no_grad():
-            for layer in [self.proj, self.proj_exogenous, self.out,
-                          self.class_proj]:
-                if layer is not None:
-                    torch.nn.init.kaiming_normal_(layer.weight)
-                    torch.nn.init.zeros_(layer.bias)
+        for layer in [self.proj, self.proj_exogenous, self.out,
+                      self.class_proj]:
+            if layer is not None:
+                torch.nn.init.kaiming_normal_(layer.weight)
+                torch.nn.init.zeros_(layer.bias)
 
-            if self.out is not None:
-                self.out.weight /= 8.
+        if self.out is not None:
+            self.out.weight /= 8.
 
-            if self.class_token is not None:
-                torch.nn.init.zeros_(self.class_token)
+        if self.class_token is not None:
+            torch.nn.init.zeros_(self.class_token)
 
-            self.main._init()
+        self.embedding._init()
+        self.main._init()
 
     def forward(self, x_in: torch.Tensor, t_in: Optional[torch.Tensor] = None,
                 x_out: Optional[torch.Tensor] = None,
@@ -284,7 +296,7 @@ class EncoderTransformer(torch.nn.Module):
             x_out = mask
         x = torch.cat((x_in, x_out), dim=2)
 
-        x = self.time_embedding(x, t)
+        x = self.embedding(x, t)
 
         # Add class token if needed.
         if self.class_token is not None:

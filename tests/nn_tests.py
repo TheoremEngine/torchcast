@@ -74,6 +74,15 @@ class LayersTest(unittest.TestCase):
         mask = torch.tensor([[0., 1.], [1., 0.]])
         self.assertTrue((out[0, 2:, :] == mask).all())
 
+    def test_time_embedding(self):
+        # Smoke test only
+
+        embed = tc.nn.TimeEmbedding(32, ['H', 'm'])
+        x = torch.randn((3, 32, 5))
+        t = torch.arange(5, dtype=torch.int64).view(1, 1, 5)
+        out = embed(x, t)
+        self.assertEqual(out.shape, (3, 32, 5))
+
 
 class ModelsTest(unittest.TestCase):
     def test_encoder_decoder_transformer(self):
