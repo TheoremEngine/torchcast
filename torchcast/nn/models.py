@@ -1,8 +1,8 @@
-from typing import Optional
+from typing import Callable, Optional
 
 import torch
 
-from .layers import NaNEncoder, TimeEmbedding
+from .layers import NaNEncoder, TimeEmbedding, TimeLastLayerNorm
 from .transformers import Decoder, Encoder
 
 __all__ = ['EncoderDecoderTransformer', 'EncoderTransformer']
@@ -16,7 +16,8 @@ class EncoderDecoderTransformer(torch.nn.Module):
     def __init__(self, series_dim: int, hidden_dim: int,
                  num_encoder_layers: int, num_decoder_layers: int,
                  exogenous_dim: int = 0, predict_ahead: int = 1,
-                 num_heads: int = 8, one_hot_encode_nan_inputs: bool = False):
+                 num_heads: int = 8, one_hot_encode_nan_inputs: bool = False,
+                 dropout: float = 0.1, norm: Callable = TimeLastLayerNorm):
         '''
         Args:
             series_dim (int): Number of channels in the time series.
@@ -34,6 +35,10 @@ class EncoderDecoderTransformer(torch.nn.Module):
             one_hot_encode_nan_inputs (bool): If provided, expect NaNs to be in
             inputs, and use one-hot encoding prior to the projection to handle
             them.
+            dropout (float): Dropout probability.
+            norm (callable): A function for constructing a normalization layer.
+            This should expect the dimension as an argument and return the
+            layer.
         '''
         super().__init__()
 
@@ -42,10 +47,12 @@ class EncoderDecoderTransformer(torch.nn.Module):
         self.proj = torch.nn.Conv1d(m * series_dim, hidden_dim, 1)
         self.time_embedding = TimeEmbedding(hidden_dim)
         self.encoder = Encoder(
-            hidden_dim, num_encoder_layers, num_heads=num_heads
+            hidden_dim, num_encoder_layers, num_heads=num_heads,
+            dropout=dropout, norm=norm
         )
         self.decoder = Decoder(
-            hidden_dim, num_encoder_layers, num_heads=num_heads
+            hidden_dim, num_encoder_layers, num_heads=num_heads,
+            dropout=dropout, norm=norm
         )
 
         if exogenous_dim:
@@ -130,7 +137,8 @@ class EncoderTransformer(torch.nn.Module):
     def __init__(self, series_dim: int, hidden_dim: int, num_layers: int,
                  exogenous_dim: int = 0, predict_ahead: int = 0,
                  num_classes: int = 0, num_heads: int = 8,
-                 one_hot_encode_nan_inputs: bool = False):
+                 one_hot_encode_nan_inputs: bool = False,
+                 dropout: float = 0.1, norm: Callable = TimeLastLayerNorm):
         '''
         Args:
             series_dim (int): Number of channels in the time series.
@@ -147,6 +155,10 @@ class EncoderTransformer(torch.nn.Module):
             one_hot_encode_nan_inputs (bool): If provided, expect NaNs to be in
             inputs, and use one-hot encoding prior to the projection to handle
             them.
+            dropout (float): Dropout probability.
+            norm (callable): A function for constructing a normalization layer.
+            This should expect the dimension as an argument and return the
+            layer.
         '''
         super().__init__()
 
@@ -154,7 +166,10 @@ class EncoderTransformer(torch.nn.Module):
         m = 2 if one_hot_encode_nan_inputs else 1
         self.proj = torch.nn.Conv1d(m * series_dim, hidden_dim, 1)
         self.time_embedding = TimeEmbedding(hidden_dim)
-        self.main = Encoder(hidden_dim, num_layers, num_heads=num_heads)
+        self.main = Encoder(
+            hidden_dim, num_layers, num_heads=num_heads, dropout=dropout,
+            norm=norm,
+        )
 
         if exogenous_dim:
             self.proj_exogenous = torch.nn.Conv1d(

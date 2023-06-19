@@ -2,7 +2,7 @@ import math
 
 import torch
 
-__all__ = ['NaNEncoder', 'TimeEmbedding']
+__all__ = ['NaNEncoder', 'TimeEmbedding', 'TimeLastLayerNorm']
 
 
 class NaNEncoder(torch.nn.Module):
@@ -45,3 +45,13 @@ class TimeEmbedding(torch.nn.Module):
         if x.shape[2] > self.time_embedding.shape[2]:
             raise ValueError('Length of sequences exceed maximum value')
         return x + self.time_embedding[:, :, :x.shape[2]]
+
+
+class TimeLastLayerNorm(torch.nn.LayerNorm):
+    '''
+    This is an implementation of layer norm that expects the tensor to have the
+    channel dimension as the 1st dimension instead of the last dimension, and
+    the time as the last dimension instead of the 1st.
+    '''
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return super().forward(x.transpose(1, -1)).transpose(1, -1)
