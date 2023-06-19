@@ -1,9 +1,11 @@
+from datetime import datetime
 from typing import Callable, Optional, Union
 
 import numpy as np
 import pandas as pd
+import torch
 
-from ..data import TensorSeriesDataset
+from ..data import Metadata, TensorSeriesDataset
 from .utils import _download_and_extract, _split_7_1_2
 
 __all__ = ['ExchangeRateDataset']
@@ -51,20 +53,29 @@ class ExchangeRateDataset(TensorSeriesDataset):
         df = pd.read_csv(buff, header=None)
 
         data = np.array(df, dtype=np.float32).T
-        data = data.reshape(1, *data.shape)
         # In the pre-processing applied by Zeng et al., the last two channels
         # are swapped. To ensure replicability, we repeat that here.
-        data = data[:, [0, 1, 2, 3, 4, 5, 7, 6], :]
+        data = data[[0, 1, 2, 3, 4, 5, 7, 6], :]
+        data = torch.from_numpy(data).unsqueeze(0)
+
+        # Per the README at:
+        # https://github.com/laiguokun/multivariate-time-series-data
+        # The data is taken daily, starting at 1990-01-01.
+        t = pd.date_range(
+            datetime(1990, 1, 1), datetime(2010, 10, 10), freq='D'
+        )
+        t = torch.from_numpy(t.astype(np.int64).values).view(1, 1, -1)
 
         if scale:
             train_data = _split_7_1_2('train', input_margin, data)
             mean, std = train_data.mean((0, 2)), train_data.std((0, 2))
             data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
 
-        data = _split_7_1_2(split, input_margin, data)
+        data, t = _split_7_1_2(split, input_margin, data, t)
 
         super().__init__(
-            data,
+            t, data,
             transform=transform,
             return_length=return_length,
+            metadata=[Metadata(name='Datetime'), Metadata(name='Rate')],
         )

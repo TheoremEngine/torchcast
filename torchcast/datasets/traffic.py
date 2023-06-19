@@ -1,8 +1,11 @@
+from datetime import datetime, timedelta
 from typing import Callable, Optional, Union
 
+import numpy as np
+import pandas as pd
 import torch
 
-from ..data import TensorSeriesDataset
+from ..data import Metadata, TensorSeriesDataset
 from ._file_readers import parse_tsf
 from .utils import _download_and_extract, _split_7_1_2
 
@@ -16,9 +19,9 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
     '''
     San Francisco traffic dataset, taken from:
 
-    https://pems.dot.ca.gov
+        https://pems.dot.ca.gov
 
-    https://arxiv.org/abs/1703.07015
+        https://arxiv.org/abs/1703.07015
     '''
     def __init__(self, path: Optional[str] = None, split: str = 'all',
                  scale: bool = True, download: Union[str, bool] = True,
@@ -51,15 +54,26 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
         data, _ = parse_tsf(buff.read())
         data = torch.from_numpy(data).permute(1, 0, 2)
 
+        # The data starts at 2015-01-01 00:00:00. Per the README at:
+        # https://github.com/laiguokun/multivariate-time-series-data
+        # The data is taken hourly.
+        t = pd.date_range(
+            datetime(2015, 1, 1),
+            datetime(2015, 1, 1) + timedelta(hours=(data.shape[2] - 1)),
+            freq='H',
+        )
+        t = torch.from_numpy(t.astype(np.int64).values).view(1, 1, -1)
+
         if scale:
             train_data = _split_7_1_2('train', input_margin, data)
             mean, std = train_data.mean((0, 2)), train_data.std((0, 2))
             data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
 
-        data = _split_7_1_2(split, input_margin, data)
+        data, t = _split_7_1_2(split, input_margin, data, t)
 
         super().__init__(
-            data,
+            t, data,
             transform=transform,
             return_length=return_length,
+            metadata=[Metadata(name='Datetime'), Metadata(name='Rate')],
         )

@@ -35,6 +35,19 @@ class ElectricityLoadDataset(unittest.TestCase):
             download=True, return_length=432, split='train', scale=False,
         )
 
+        self.assertEqual(len(ds.data), 2)
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+
+        self.assertTrue(isinstance(ds.metadata, list))
+        self.assertEqual(len(ds.metadata), 2)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, None)
+        self.assertEqual(ds.metadata[1].name, 'Load')
+        self.assertEqual(ds.metadata[1].channel_names, None)
+        self.assertEqual(ds.metadata[1].series_names, None)
+
         ltsf_ds = Dataset_Custom(
             LTSF_DATA_ROOT,
             # size=(seq_len, label_len, pred_len).
@@ -57,15 +70,12 @@ class ElectricityLoadDataset(unittest.TestCase):
         self.assertEqual(len(ds), len(ltsf_ds))
 
         for t in [0, 1, len(ds) - 1]:
-            my_series = ds[t]
+            _, my_series = ds[t]
             x, y, _, _ = ltsf_ds[t]
             # Check values
             x, y = torch.from_numpy(x), torch.from_numpy(y)
             ltsf_series = torch.cat((x, y[48:, :]), dim=0).T.float()
             self.assertTrue(torch.isclose(my_series, ltsf_series).all())
-
-        self.assertEqual(len(ds.data), 1)
-        self.assertEqual(ds.data[0].dtype, torch.float32)
 
 
 class ETTDataset(unittest.TestCase):
@@ -243,6 +253,19 @@ class ExchangeRateDataset(unittest.TestCase):
             download=True, split='train', return_length=432, scale=False,
         )
 
+        self.assertEqual(len(ds.data), 2)
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+
+        self.assertTrue(isinstance(ds.metadata, list))
+        self.assertEqual(len(ds.metadata), 2)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, None)
+        self.assertEqual(ds.metadata[1].name, 'Rate')
+        self.assertEqual(ds.metadata[1].channel_names, None)
+        self.assertEqual(ds.metadata[1].series_names, None)
+
         ltsf_ds = Dataset_Custom(
             LTSF_DATA_ROOT,
             # size=(seq_len, label_len, pred_len).
@@ -267,15 +290,12 @@ class ExchangeRateDataset(unittest.TestCase):
         # In this case, the dates in Dataset_Custom are dummies.
 
         for t in [0, 1, len(ds) - 1]:
-            my_series = ds[t]
+            _, my_series = ds[t]
             x, y, _, _ = ltsf_ds[t]
             # Check values
             x, y = torch.from_numpy(x), torch.from_numpy(y)
             ltsf_series = torch.cat((x, y[48:, :]), dim=0).T.float()
             self.assertTrue(torch.isclose(my_series, ltsf_series).all())
-
-        self.assertEqual(len(ds.data), 1)
-        self.assertEqual(ds.data[0].dtype, torch.float32)
 
 
 class GermanWeatherDataset(unittest.TestCase):
@@ -424,6 +444,19 @@ class SanFranciscoTrafficDataset(unittest.TestCase):
             download=True, split='train', return_length=432, scale=False,
         )
 
+        self.assertEqual(len(ds.data), 2)
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+
+        self.assertTrue(isinstance(ds.metadata, list))
+        self.assertEqual(len(ds.metadata), 2)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, None)
+        self.assertEqual(ds.metadata[1].name, 'Rate')
+        self.assertEqual(ds.metadata[1].channel_names, None)
+        self.assertEqual(ds.metadata[1].series_names, None)
+
         ltsf_ds = Dataset_Custom(
             LTSF_DATA_ROOT,
             # size=(seq_len, label_len, pred_len).
@@ -448,15 +481,12 @@ class SanFranciscoTrafficDataset(unittest.TestCase):
         # We do not store the datetimes here.
 
         for t in [0, 1, len(ds) - 1]:
-            my_series = ds[t]
+            _, my_series = ds[t]
             x, y, _, _ = ltsf_ds[t]
             # Check values
             x, y = torch.from_numpy(x), torch.from_numpy(y)
             ltsf_series = torch.cat((x, y[48:, :]), dim=0).T.float()
             self.assertTrue(torch.isclose(my_series, ltsf_series).all())
-
-        self.assertEqual(len(ds.data), 1)
-        self.assertEqual(ds.data[0].dtype, torch.float32)
 
 
 if __name__ == '__main__':

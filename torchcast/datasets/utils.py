@@ -188,6 +188,10 @@ def _split_7_1_2(split: str, input_length: Optional[int],
         prediction. If provided, then the val and test sets will include this
         much margin on the left-hand side.
     '''
+    ts = {x.shape[2] for x in tensors if x.shape[2] > 1}
+    if len(ts) > 1:
+        raise ValueError(f'Received conflicting time lengths: {ts}')
+
     if split in {'train', 'val', 'test'}:
         input_length = input_length or 0
         num_all = max(x.shape[2] for x in tensors)
