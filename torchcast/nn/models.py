@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import torch
 
@@ -13,23 +13,22 @@ class EncoderDecoderTransformer(torch.nn.Module):
     Provides a complete encoder-decoder transformer network for time series
     forecasting.
     '''
-    def __init__(self, series_dim: int, hidden_dim: int,
+    def __init__(self, in_dim: int, hidden_dim: int, out_dim: int,
                  num_encoder_layers: int, num_decoder_layers: int,
-                 exogenous_dim: int = 0, predict_ahead: int = 1,
-                 num_heads: int = 8, one_hot_encode_nan_inputs: bool = False,
-                 dropout: float = 0.1, norm: Callable = TimeLastLayerNorm):
+                 exogenous_dim: int = 0, num_heads: int = 8,
+                 one_hot_encode_nan_inputs: bool = False, dropout: float = 0.1,
+                 norm: Callable = TimeLastLayerNorm):
         '''
         Args:
-            series_dim (int): Number of channels in the time series.
+            in_dim (int): Number of channels in the input time series.
             hidden_dim (int): Number of channels in hidden layers.
+            out_dim (int): Number of channels in the output time series.
             num_encoder_layers (int): Number of transformer layers in the
             encoder.
             num_decoder_layers (int): Number of transformer layers in the
             decoder.
             exogenous_dim (int): The number of channels in the exogenous data
-            used in prediction.
-            predict_ahead (int): If provided, how far ahead the network will
-            predict, in time steps.
+            used as additional inputs for the output tokens.
             num_heads (int): Number of heads per transformer.
             token_size (int): Spatial width of each token.
             one_hot_encode_nan_inputs (bool): If provided, expect NaNs to be in
@@ -42,9 +41,12 @@ class EncoderDecoderTransformer(torch.nn.Module):
         '''
         super().__init__()
 
+        if out_dim <= 0:
+            raise ValueError(out_dim)
+
         self.nan_encoder = NaNEncoder() if one_hot_encode_nan_inputs else None
         m = 2 if one_hot_encode_nan_inputs else 1
-        self.proj = torch.nn.Conv1d(m * series_dim, hidden_dim, 1)
+        self.proj = torch.nn.Conv1d(m * in_dim, hidden_dim, 1)
         self.time_embedding = TimeEmbedding(hidden_dim)
         self.encoder = Encoder(
             hidden_dim, num_encoder_layers, num_heads=num_heads,
@@ -62,11 +64,8 @@ class EncoderDecoderTransformer(torch.nn.Module):
         else:
             self.proj_exogenous = None
 
-        self.out = torch.nn.ConvTranspose1d(
-            hidden_dim, series_dim, 1
-        )
+        self.out = torch.nn.Conv1d(hidden_dim, out_dim, 1)
         self.mask_token = torch.nn.Parameter(torch.randn(hidden_dim))
-        self.predict_ahead = predict_ahead
 
         self._init()
 
@@ -81,51 +80,72 @@ class EncoderDecoderTransformer(torch.nn.Module):
             self.encoder._init()
             self.decoder._init()
 
-    def forward(self, x: torch.Tensor,
-                exogenous: Optional[torch.Tensor] = None):
+    def forward(self, x_in: torch.Tensor, t_in: Optional[torch.Tensor] = None,
+                x_out: Optional[torch.Tensor] = None,
+                t_out: Optional[Union[int, torch.Tensor]] = None) \
+            -> torch.Tensor:
         '''
         Args:
-            x (:class:`torch.Tensor`): The time series observed so far. This
-            should not include exogenous data, if present.
-            exogenous (:class:`torch.Tensor`): This should contain the
-            exogenous data for both the observed time series and the forecast
-            region of the time series. This will be used to determine how far
-            to predict ahead.
+            x_in (:class:`torch.Tensor`): The time series observed so far. This
+            should include exogenous data, if present.
+            t_in (optional, :class:`torch.Tensor`): The times of the time
+            series observed so far. If not provided, integer time steps will be
+            used.
+            x_out (optional, :class:`torch.Tensor`): The exogenous data for the
+            forecast region of the time series.
+            t_out (optional, int or :class:`torch.Tensor`): The times of the
+            time series to be forecasted. If an integer is provided, integer
+            time steps will be used. If not provided, x_out must be provided,
+            and the number of time steps will be inferred from its shape.
         '''
         if self.nan_encoder is not None:
-            x = self.nan_encoder(x)
-            if exogenous is not None:
-                exogenous = self.nan_encoder(exogenous)
+            x_in = self.nan_encoder(x_in)
+            if x_out is not None:
+                x_out = self.nan_encoder(x_out)
 
-        x = self.proj(x)
+        # Prep tokens to input into encoder
+        x_in = self.proj(x_in)
 
-        # Attach mask tokens to time series embedding.
-        if self.predict_ahead is not None:
-            mask = self.mask_token.view(1, -1, 1)
-            mask = mask.repeat(x.shape[0], 1, self.predict_ahead)
-            x = torch.cat((x, mask), dim=2)
+        if t_in is None:
+            t_in = torch.arange(x_in.shape[2], device=x_in.device)
+            t_in = t_in.view(1, 1, -1).repeat(x_in.shape[0], 1, 1)
 
-        # Add exogenous data to time series embedding.
+        x_in = self.time_embedding(x_in, t_in)
+
+        # Prep tokens to input into decoder
+        if t_out is None and x_out is None:
+            raise ValueError('t_out must be provided')
+        elif t_out is None:
+            t_out = x_out.shape[2]
+        if isinstance(t_out, int):
+            t_out = torch.arange(
+                x_in.shape[2], x_in.shape[2] + t_out, device=x_in.device
+            )
+            t_out = t_out.view(1, 1, -1).repeat(x_in.shape[0], 1, 1)
+
+        mask = self.mask_token.view(1, -1, 1)
+        mask = mask.repeat(t_out.shape[0], 1, t_out.shape[2])
+
         if self.proj_exogenous is not None:
-            if exogenous is None:
+            if x_out is None:
                 raise ValueError(
                     'Exogenous variables expected but not received'
                 )
-            x += self.proj_exogenous(exogenous)
-        elif exogenous is not None:
+            x_out = self.proj_exogenous(x_out) + mask
+        elif x_out is not None:
             raise ValueError(
                 'Exogenous variables received but not expected'
             )
+        else:
+            x_out = mask
 
-        x = self.time_embedding(x)
-        encoder_x = x[:, :, :-self.predict_ahead]
-        decoder_x = x[:, :, -self.predict_ahead:]
+        x_out = self.time_embedding(x_out, t_out)
 
-        # Now that the embeddings are prepped, pass through the encoder.
-        encoder_x = self.encoder(encoder_x)
+        # Now that the tokens are prepped, pass through the encoder.
+        encoder_x = self.encoder(x_in)
         # And then the decoder.
-        x = self.decoder(decoder_x, encoder_x)
-
+        x = self.decoder(x_out, encoder_x)
+        # And then the output projection.
         return self.out(x)
 
 
@@ -134,22 +154,22 @@ class EncoderTransformer(torch.nn.Module):
     Provides a complete encoder-only transformer network for time series
     forecasting.
     '''
-    def __init__(self, series_dim: int, hidden_dim: int, num_layers: int,
-                 exogenous_dim: int = 0, predict_ahead: int = 0,
-                 num_classes: int = 0, num_heads: int = 8,
-                 one_hot_encode_nan_inputs: bool = False,
-                 dropout: float = 0.1, norm: Callable = TimeLastLayerNorm):
+    def __init__(self, in_dim: int, hidden_dim: int, out_dim: int,
+                 num_encoder_layers: int, num_classes: int = 0,
+                 exogenous_dim: int = 0, num_heads: int = 8,
+                 one_hot_encode_nan_inputs: bool = False, dropout: float = 0.1,
+                 norm: Callable = TimeLastLayerNorm):
         '''
         Args:
-            series_dim (int): Number of channels in the time series.
+            in_dim (int): Number of channels in the input time series.
             hidden_dim (int): Number of channels in hidden layers.
-            num_layers (int): Number of transformer layers.
-            exogenous_dim (int): The number of channels in the exogenous data
-            used in prediction.
-            predict_ahead (int): If provided, how far ahead the network will
-            predict, in time steps.
+            out_dim (int): Number of channels in the output time series.
+            num_encoder_layers (int): Number of transformer layers in the
+            encoder.
             num_classes (int): If provided, include a classifier
             token predicting this many classes.
+            exogenous_dim (int): The number of channels in the exogenous data
+            used as additional inputs for the output tokens.
             num_heads (int): Number of heads per transformer.
             token_size (int): Spatial width of each token.
             one_hot_encode_nan_inputs (bool): If provided, expect NaNs to be in
@@ -164,11 +184,11 @@ class EncoderTransformer(torch.nn.Module):
 
         self.nan_encoder = NaNEncoder() if one_hot_encode_nan_inputs else None
         m = 2 if one_hot_encode_nan_inputs else 1
-        self.proj = torch.nn.Conv1d(m * series_dim, hidden_dim, 1)
+        self.proj = torch.nn.Conv1d(m * in_dim, hidden_dim, 1)
         self.time_embedding = TimeEmbedding(hidden_dim)
         self.main = Encoder(
-            hidden_dim, num_layers, num_heads=num_heads, dropout=dropout,
-            norm=norm,
+            hidden_dim, num_encoder_layers, num_heads=num_heads,
+            dropout=dropout, norm=norm,
         )
 
         if exogenous_dim:
@@ -178,14 +198,13 @@ class EncoderTransformer(torch.nn.Module):
         else:
             self.proj_exogenous = None
 
-        if predict_ahead:
+        if out_dim:
             self.out = torch.nn.ConvTranspose1d(
-                hidden_dim, series_dim, 1
+                hidden_dim, out_dim, 1
             )
             self.mask_token = torch.nn.Parameter(torch.randn(hidden_dim))
-            self.predict_ahead = predict_ahead
         else:
-            self.out = self.mask_token = self.predict_ahead = None
+            self.out = self.mask_token = None
 
         if num_classes:
             self.class_token = torch.nn.Parameter(torch.randn(hidden_dim))
@@ -211,39 +230,61 @@ class EncoderTransformer(torch.nn.Module):
 
             self.main._init()
 
-    def forward(self, x: torch.Tensor,
-                exogenous: Optional[torch.Tensor] = None):
+    def forward(self, x_in: torch.Tensor, t_in: Optional[torch.Tensor] = None,
+                x_out: Optional[torch.Tensor] = None,
+                t_out: Optional[Union[int, torch.Tensor]] = None):
         '''
         Args:
-            x (:class:`torch.Tensor`): The time series observed so far. This
-            should not include exogenous data, if present.
-            exogenous (:class:`torch.Tensor`): This should contain the
-            exogenous data for both the observed time series and the forecast
-            region of the time series. This will be used to determine how far
-            to predict ahead.
+            x_in (:class:`torch.Tensor`): The time series observed so far. This
+            should include exogenous data, if present.
+            t_in (optional, :class:`torch.Tensor`): The times of the time
+            series observed so far. If not provided, integer time steps will be
+            used.
+            x_out (optional, :class:`torch.Tensor`): The exogenous data for the
+            forecast region of the time series.
+            t_out (optional, int or :class:`torch.Tensor`): The times of the
+            time series to be forecasted. If an integer is provided, integer
+            time steps will be used. If not provided, x_out must be provided,
+            and the number of time steps will be inferred from its shape.
         '''
         if self.nan_encoder is not None:
-            x = self.nan_encoder(x)
-            if exogenous is not None:
-                exogenous = self.nan_encoder(exogenous)
+            x_in = self.nan_encoder(x_in)
+            if x_out is not None:
+                x_out = self.nan_encoder(x_out)
 
-        x = self.proj(x)
+        if t_in is None:
+            t_in = torch.arange(x_in.shape[2], device=x_in.device)
+            t_in = t_in.view(1, 1, -1).repeat(x_in.shape[0], 1, 1)
+        if t_out is None and x_out is None:
+            raise ValueError('t_out must be provided')
+        elif t_out is None:
+            t_out = x_out.shape[2]
+        if isinstance(t_out, int):
+            t_out = torch.arange(
+                x_in.shape[2], x_in.shape[2] + t_out, device=x_in.device
+            )
+            t_out = t_out.view(1, 1, -1).repeat(x_in.shape[0], 1, 1)
+        t = torch.cat((t_in, t_out), dim=2)
 
-        # Attach mask tokens to time series embedding.
-        if self.predict_ahead is not None:
-            mask = self.mask_token.view(1, -1, 1)
-            mask = mask.repeat(x.shape[0], 1, self.predict_ahead)
-            x = torch.cat((x, mask), dim=2)
+        x_in = self.proj(x_in)
 
-        # Add exogenous data to time series embedding.
+        mask = self.mask_token.view(1, -1, 1)
+        mask = mask.repeat(x_in.shape[0], 1, t_out.shape[2])
         if self.proj_exogenous is not None:
-            if exogenous is None:
+            if x_out is None:
                 raise ValueError(
                     'Exogenous variables expected but not received'
                 )
-            x += self.proj_exogenous(exogenous)
+            x_out = mask + self.proj_exogenous(x_out)
+        elif x_out is not None:
+            raise ValueError(
+                'Exogenous variables received but not expected'
+            )
+        else:
+            x_out = mask
+        x = torch.cat((x_in, x_out), dim=2)
 
-        x = self.time_embedding(x)
+        x = self.time_embedding(x, t)
 
         # Add class token if needed.
         if self.class_token is not None:
@@ -260,6 +301,6 @@ class EncoderTransformer(torch.nn.Module):
             out = out + (self.class_proj(class_token),)
 
         if self.out is not None:
-            out = out + (self.out(x)[:, :, -self.predict_ahead:],)
+            out = out + (self.out(x[:, :, -t_out.shape[2]:]),)
 
         return out[0] if (len(out) == 1) else out

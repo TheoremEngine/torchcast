@@ -24,27 +24,21 @@ class TimeEmbedding(torch.nn.Module):
     '''
     This layer attaches a time embedding to one or more input sequences.
     '''
-    def __init__(self, dim: int, max_sequence_length: int = 5000):
+    def __init__(self, dim: int):
         '''
         Args:
             dim (int): Number of input channels.
-            max_sequence_length (int): The maximum sequence length.
         '''
         super().__init__()
-
-        t = torch.arange(max_sequence_length).unsqueeze(1)
         divisor = (torch.arange(0, dim, 2) * (-math.log(10000.) / dim)).exp()
+        self.register_buffer('divisor', divisor)
 
-        # time_embedding must be of arrangement 1CT.
-        time_embedding = torch.zeros(1, dim, max_sequence_length)
-        time_embedding[0, 0::2, :] = (t * divisor).sin().T
-        time_embedding[0, 1::2, :] = (t * divisor).cos().T
-        self.register_buffer('time_embedding', time_embedding)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if x.shape[2] > self.time_embedding.shape[2]:
-            raise ValueError('Length of sequences exceed maximum value')
-        return x + self.time_embedding[:, :, :x.shape[2]]
+    def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        if (t.shape[2] != x.shape[2]):
+            raise ValueError(f'Mismatch in time length: {x.shape}, {t.shape}')
+        embed = (t * self.divisor.view(1, -1, 1))
+        embed = torch.cat((embed.sin(), embed.cos()), dim=1)
+        return x + embed
 
 
 class TimeLastLayerNorm(torch.nn.LayerNorm):
