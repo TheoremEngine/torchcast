@@ -77,7 +77,7 @@ class LayersTest(unittest.TestCase):
     def test_time_embedding(self):
         # Smoke test only
 
-        embed = tc.nn.TimeEmbedding(32, ['H', 'm'])
+        embed = tc.nn.TimeEmbedding(32, ['H', 'Y', 'W', 'D'])
         x = torch.randn((3, 32, 5))
         t = torch.arange(5, dtype=torch.int64).view(1, 1, 5)
         out = embed(x, t)

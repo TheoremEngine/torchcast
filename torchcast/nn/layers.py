@@ -1,6 +1,7 @@
 from math import log, pi
-from typing import Iterable
+from typing import Iterable, Union
 
+import pandas as pd
 import torch
 
 __all__ = [
@@ -51,20 +52,13 @@ class TimeEmbedding(torch.nn.Module):
     '''
     This layer attaches a temporal embedding to the input sequence.
     '''
-    wavelengths = {
-        'W': 604_800_000_000_000,
-        'D':  86_400_000_000_000,
-        'H':   3_600_000_000_000,
-        'm':      60_000_000_000,
-        's':       1_000_000_000,
-    }
-
-    def __init__(self, dim: int, frequencies: Iterable[str]):
+    def __init__(self, dim: int, frequencies: Iterable[Union[str, int]]):
         super().__init__()
         self.embed = torch.nn.ModuleDict({
             f: torch.nn.Conv1d(2, dim, 1) for f in frequencies
         })
         self.frequencies = frequencies
+        self.wavelengths = [_get_wavelength(f) for f in frequencies]
 
     def _init(self):
         for conv in self.embed.values():
@@ -73,11 +67,21 @@ class TimeEmbedding(torch.nn.Module):
             torch.nn.init.zeros_(conv.bias)
 
     def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        for f in self.frequencies:
-            wl = self.wavelengths[f]
+        for f, wl in zip(self.frequencies, self.wavelengths):
             t_f = 2 * pi * (t % wl).float() / wl
             x = x + self.embed[f](torch.cat((t_f.sin(), t_f.cos()), dim=1))
         return x
+
+
+def _get_wavelength(f: Union[int, str]) -> int:
+    if isinstance(f, int):
+        return f
+    elif f == 'W':
+        return pd.tseries.frequencies.to_offset('D').nanos * 7
+    elif f == 'Y':
+        return pd.tseries.frequencies.to_offset('D').nanos * 365
+    else:
+        return pd.tseries.frequencies.to_offset(f).nanos
 
 
 class TimeLastLayerNorm(torch.nn.LayerNorm):
