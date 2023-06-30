@@ -116,8 +116,6 @@ class EncoderDecoderTransformer(torch.nn.Module):
             t_in = torch.arange(x_in.shape[2], device=x_in.device)
             t_in = t_in.view(1, 1, -1).repeat(x_in.shape[0], 1, 1)
 
-        x_in = self.embedding(x_in, t_in)
-
         # Prep tokens to input into decoder
         if t_out is None and x_out is None:
             raise ValueError('t_out must be provided')
@@ -145,7 +143,10 @@ class EncoderDecoderTransformer(torch.nn.Module):
         else:
             x_out = mask
 
-        x_out = self.embedding(x_out, t_out)
+        x = torch.cat((x_in, x_out), dim=2)
+        t = torch.cat((t_in, t_out), dim=2)
+        x = self.embedding(x, t)
+        x_in, x_out = x[:, :, :x_in.shape[2]], x[:, :, x_in.shape[2]:]
 
         # Now that the tokens are prepped, pass through the encoder.
         encoder_x = self.encoder(x_in)

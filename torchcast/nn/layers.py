@@ -28,7 +28,7 @@ class PositionEmbedding(torch.nn.Module):
     '''
     This layer attaches a positional embedding to the input sequence.
     '''
-    def __init__(self, dim: int):
+    def __init__(self, dim: int, scale: int = 1):
         '''
         Args:
             dim (int): Number of input channels.
@@ -36,6 +36,7 @@ class PositionEmbedding(torch.nn.Module):
         super().__init__()
         divisor = (torch.arange(0, dim, 2) * (-log(10000.) / dim)).exp()
         self.register_buffer('divisor', divisor)
+        self.scale = scale
 
     def _init(self):
         return
@@ -43,6 +44,7 @@ class PositionEmbedding(torch.nn.Module):
     def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         if (t.shape[2] != x.shape[2]):
             raise ValueError(f'Mismatch in time length: {x.shape}, {t.shape}')
+        t = ((t - t[:, :, 0:1]) // self.scale).float()
         embed = (t * self.divisor.view(1, -1, 1))
         embed = torch.cat((embed.sin(), embed.cos()), dim=1)
         return x + embed
