@@ -34,8 +34,8 @@ class GermanWeatherDataset(TensorSeriesDataset):
     def __init__(self, path: Optional[str] = None,
                  year: Union[int, Iterable[int]] = 2020,
                  site: Union[str, Iterable[str]] = 'beutenberg',
-                 split: str = 'all', scale: bool = True,
-                 download: Union[bool, str] = True,
+                 split: str = 'all', download: Union[bool, str] = True,
+                 scale: bool = True, columns_as_channels: bool = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
@@ -49,11 +49,14 @@ class GermanWeatherDataset(TensorSeriesDataset):
             retrieve. Choices: 'beutenberg', 'saaleaue', 'versuchsbeete'.
             split (str): What split of the data to return. The splits are taken
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
-            scale (bool): Whether to normalize the data, as in the benchmark.
             download (bool or str): Whether to download the dataset if it is
             not already available. Choices: True, False, 'force'.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
+            scale (bool): Whether to normalize the data, as in the benchmark.
+            columns_as_channels (bool): If true, each column is treated as a
+            separate channel. If false, each column is treated as a separate
+            series.
             input_margin (optional, int): The amount of margin to include on
             the left-hand side of the dataset, as it is used as an input to the
             model.
@@ -103,6 +106,9 @@ class GermanWeatherDataset(TensorSeriesDataset):
         data_meta = Metadata(name='Data', channel_names=channel_names)
 
         dates, data = _split_7_1_2(split, input_margin, dates, data)
+
+        if not columns_as_channels:
+            data = data.permute(1, 0, 2)
 
         super().__init__(
             dates, data,

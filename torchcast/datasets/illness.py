@@ -24,6 +24,7 @@ class ILIDataset(TensorSeriesDataset):
     select the desired seasons, then click "Download Data".
     '''
     def __init__(self, path: str, split: str = 'all', scale: bool = True,
+                 columns_as_channels: bool = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
@@ -33,6 +34,9 @@ class ILIDataset(TensorSeriesDataset):
             split (str): What split of the data to return. The splits are taken
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             scale (bool): Whether to normalize the data, as in the benchmark.
+            columns_as_channels (bool): If true, each column is treated as a
+            separate channel. If false, each column is treated as a separate
+            series.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
             input_margin (optional, int): The amount of margin to include on
@@ -68,6 +72,9 @@ class ILIDataset(TensorSeriesDataset):
             data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
 
         date, data = _split_7_1_2(split, input_margin, date, data)
+
+        if not columns_as_channels:
+            data = data.permute(1, 0, 2)
 
         super().__init__(
             date, data,

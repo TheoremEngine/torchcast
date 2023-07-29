@@ -47,8 +47,9 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
         https://github.com/cure-lab/LTSF-Linear
     '''
     def __init__(self, path: Optional[str] = None, task: str = '15min',
-                 split: str = 'all', scale: bool = True,
-                 download: Union[bool, str] = True,
+                 split: str = 'all', download: Union[bool, str] = True,
+                 scale: bool = True,
+                 columns_as_channels: bool = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = 336,
                  return_length: Optional[int] = None):
@@ -61,9 +62,12 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
             'hourly', 'hourly-1', 'hourly-2', '15min', '15min-1', '15min-2'.
             split (str): What split of the data to return. The splits are taken
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
-            scale (bool): Whether to normalize the data, as in the benchmark.
             download (bool or str): Whether to download the dataset if it is
             not already available. Choices: True, False, 'force'.
+            scale (bool): Whether to normalize the data, as in the benchmark.
+            columns_as_channels (bool): If true, each column is treated as a
+            separate channel. If false, each column is treated as a separate
+            series.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
             input_margin (optional, int): The amount of margin to include on
@@ -126,6 +130,9 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
             target = target[:, :, t_0:t_1]
         elif split != 'all':
             raise ValueError(split)
+
+        if not columns_as_channels:
+            data = data.permute(1, 0, 2)
 
         super().__init__(
             dates, pred, target,

@@ -1,3 +1,4 @@
+from functools import lru_cache
 import gzip
 from io import BytesIO, StringIO
 import lzma
@@ -82,7 +83,7 @@ def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
     # If we reach here, the file is not available locally. So let's get that
     # file!
     if fetcher is None:
-        fetcher = _fetch_from_remote
+        fetcher = _cached_fetch_from_remote
     buff = fetcher(url)
 
     # Extract, if needed.
@@ -173,6 +174,9 @@ def _fetch_from_remote(url: str) -> BytesIO:
     buff.seek(0)
 
     return buff
+
+
+_cached_fetch_from_remote = lru_cache(_fetch_from_remote)
 
 
 def _split_7_1_2(split: str, input_length: Optional[int],

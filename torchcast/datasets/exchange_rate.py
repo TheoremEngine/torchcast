@@ -23,7 +23,8 @@ class ExchangeRateDataset(TensorSeriesDataset):
         https://arxiv.org/abs/1703.07015
     '''
     def __init__(self, path: Optional[str] = None, split: str = 'all',
-                 scale: bool = True, download: Union[bool, str] = True,
+                 download: Union[bool, str] = True, scale: bool = True,
+                 columns_as_channels: bool = True,
                  transform: Optional[Callable] = None,
                  input_margin: Optional[int] = None,
                  return_length: Optional[int] = None):
@@ -32,11 +33,14 @@ class ExchangeRateDataset(TensorSeriesDataset):
             path (optional, str): Path to find the dataset at.
             split (str): What split of the data to return. The splits are taken
             from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
-            scale (bool): Whether to normalize the data, as in the benchmark.
             download (bool or str): Whether to download the dataset if it is
             not already available. Choices: True, False, 'force'.
             transform (optional, callable): Pre-processing functions to apply
             before returning.
+            scale (bool): Whether to normalize the data, as in the benchmark.
+            columns_as_channels (bool): If true, each column is treated as a
+            separate channel. If false, each column is treated as a separate
+            series.
             input_margin (optional, int): The amount of margin to include on
             the left-hand side of the dataset, as it is used as an input to the
             model.
@@ -72,6 +76,9 @@ class ExchangeRateDataset(TensorSeriesDataset):
             data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
 
         data, t = _split_7_1_2(split, input_margin, data, t)
+
+        if not columns_as_channels:
+            data = data.permute(1, 0, 2)
 
         super().__init__(
             t, data,

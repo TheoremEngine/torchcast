@@ -76,12 +76,15 @@ class EncoderDecoderTransformer(torch.nn.Module):
             self._init()
 
     def _init(self):
-        for layer in [self.proj, self.proj_exogenous, self.out]:
+        for layer in [self.proj, self.proj_exogenous]:
             if layer is not None:
                 torch.nn.init.kaiming_normal_(layer.weight)
                 torch.nn.init.zeros_(layer.bias)
 
-        self.out.weight /= 8.
+        std = 1. / self.out.weight.shape[1] 
+        torch.nn.init.normal_(self.out.weight, 0., std)
+        torch.nn.init.zeros_(self.out.bias)
+
         self.encoder._init()
         self.decoder._init()
         self.embedding._init()
@@ -228,14 +231,15 @@ class EncoderTransformer(torch.nn.Module):
             self._init()
 
     def _init(self):
-        for layer in [self.proj, self.proj_exogenous, self.out,
-                      self.class_proj]:
+        for layer in [self.proj, self.proj_exogenous, self.class_proj]:
             if layer is not None:
                 torch.nn.init.kaiming_normal_(layer.weight)
                 torch.nn.init.zeros_(layer.bias)
 
         if self.out is not None:
-            self.out.weight /= 8.
+            std = 1. / self.out.weight.shape[0]
+            torch.nn.init.normal_(self.out.weight, 0., std)
+            torch.nn.init.zeros_(self.out.bias)
 
         if self.class_token is not None:
             torch.nn.init.zeros_(self.class_token)
