@@ -84,7 +84,7 @@ def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
     # file!
     if fetcher is None:
         fetcher = _cached_fetch_from_remote
-    buff = fetcher(url)
+    buff = BytesIO(fetcher(url))
 
     # Extract, if needed.
     while True:
@@ -153,7 +153,7 @@ def _fetch_from_google_drive(doc_id: str) -> BytesIO:
     return buff
 
 
-def _fetch_from_remote(url: str) -> BytesIO:
+def _fetch_from_remote(url: str) -> bytes:
     '''
     Retrieves a file from a URL and downloads it, returning it as an in-memory
     buffer.
@@ -173,7 +173,7 @@ def _fetch_from_remote(url: str) -> BytesIO:
 
     buff.seek(0)
 
-    return buff
+    return buff.read()
 
 
 _cached_fetch_from_remote = lru_cache(_fetch_from_remote)
