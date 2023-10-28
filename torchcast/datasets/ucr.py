@@ -8,7 +8,9 @@ from .utils import _download_and_extract
 
 __all__ = ['UCRDataset', 'UEADataset']
 
-ROOT_URL = 'http://www.timeseriesclassification.com/ClassificationDownloads/{name}.zip'  # noqa: E501
+UCR_URL = 'http://www.timeseriesclassification.com/aeon-toolkit/Archives/Univariate2018_ts.zip'  # noqa: E501
+
+UEA_URL = 'http://www.timeseriesclassification.com/aeon-toolkit/Archives/Multivariate2018_ts.zip'  # noqa: E501
 
 UCR_DATASETS = (
     'ACSF1', 'Adiac', 'AllGestureWiimoteX', 'AllGestureWiimoteY',
@@ -91,8 +93,8 @@ class UCRDataset(TensorSeriesDataset):
             raise ValueError(f"Split should be 'train' or 'test', got {split}")
 
         buff = _download_and_extract(
-            ROOT_URL.format(name=task),
-            f'{task}_{split.upper()}.ts',
+            UCR_URL,
+            f'Univariate_ts/{task}/{task}_{split.upper()}.ts',
             path,
             download=download,
         )
@@ -143,8 +145,8 @@ class UEADataset(TensorSeriesDataset):
             raise ValueError(f"Split should be 'train' or 'test', got {split}")
 
         buff = _download_and_extract(
-            ROOT_URL.format(name=task),
-            f'{task}_{split.upper()}.ts',
+            UEA_URL,
+            f'Multivariate_ts/{task}/{task}_{split.upper()}.ts',
             path,
             download=download,
         )
