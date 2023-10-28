@@ -4,8 +4,9 @@ import torch
 import torch.nn.functional as f
 
 __all__ = [
-    'l1_loss', 'L1Loss', 'mse_loss', 'MSELoss', 'soft_l1_loss', 'SoftL1Loss',
-    'soft_mse_loss', 'SoftMSELoss'
+    'l1_loss', 'L1Loss', 'mse_loss', 'MSELoss', 'smooth_l1_loss',
+    'SmoothL1Loss', 'soft_l1_loss', 'SoftL1Loss', 'soft_mse_loss',
+    'SoftMSELoss'
 ]
 
 
@@ -94,6 +95,46 @@ class MSELoss(torch.nn.Module):
     def forward(self, pred: torch.Tensor, target: torch.Tensor) \
             -> torch.Tensor:
         return mse_loss(pred, target, reduction=self.reduction)
+
+
+def smooth_l1_loss(pred: torch.Tensor, target: torch.Tensor,
+                   reduction: str = 'mean', beta: float = 1.0) -> torch.Tensor:
+    '''
+    This is a smooth L1 loss that ignores NaN values.
+
+    Args:
+        pred (:class:`torch.Tensor`): Predictions.
+        target (:class:`torch.Tensor`): Targets for the predictions. The
+        predictions and targets must be broadcastable.
+        reduction (str): Form of reduction to apply. Choices: 'mean', 'sum'.
+        beta (float): Boundary between L1 and L2 components.
+    '''
+    is_real = ~(torch.isnan(pred) | torch.isnan(target))
+
+    if is_real.all():
+        return f.smooth_l1_loss(pred, target, reduction=reduction, beta=beta)
+    elif not is_real.any():
+        return ZeroGrad.apply(pred, target)
+    else:
+        return f.smooth_l1_loss(
+            pred[is_real], target[is_real], reduction=reduction, beta=beta
+        )
+
+
+class SmoothL1Loss(torch.nn.Module):
+    '''
+    This is a smooth L1 loss that ignores NaN values.
+    '''
+    def __init__(self, reduction: str = 'mean', beta: float = 1.0):
+        super().__init__()
+        self.reduction = reduction
+        self.beta = beta
+
+    def forward(self, pred: torch.Tensor, target: torch.Tensor) \
+            -> torch.Tensor:
+        return smooth_l1_loss(
+            pred, target, reduction=self.reduction, beta=self.beta
+        )
 
 
 def soft_l1_loss(pred: torch.Tensor, target: torch.Tensor,
