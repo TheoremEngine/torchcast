@@ -1,5 +1,4 @@
 import os
-import tempfile
 import unittest
 import warnings
 
@@ -31,6 +30,14 @@ LTSF_DATA_ROOT = os.path.abspath(os.path.join(__file__, '../ltsf/data/'))
 
 class ElectricityLoadDataset(unittest.TestCase):
     def test_full_up(self):
+        if not os.path.exists(LTSF_DATA_ROOT):
+            warnings.warn(
+                'Cannot run ElectricityLoadDataset.test_full_up; please '
+                'download dataset from https://github.com/cure-lab/LTSF-Linear'
+                ' and place in tests/ltsf/data/'
+            )
+            return
+
         ds = tc.datasets.ElectricityLoadDataset(
             download=True, return_length=432, split='train', scale=False,
         )
@@ -94,7 +101,8 @@ class ETTDataset(unittest.TestCase):
         #
         #     https://github.com/cure-lab/LTSF-Linear
         #
-        # We have copied some of the code into the subdirectory ltsf to assist.
+        # We have copied some of the code into the subdirectory ltsf to
+        # assist.
 
         for i in [1, 2]:
             ds = tc.datasets.ElectricityTransformerDataset(
