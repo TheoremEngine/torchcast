@@ -90,7 +90,7 @@ class ModelsTest(unittest.TestCase):
 
         # First, no exogenous
         net = tc.nn.EncoderDecoderTransformer(
-            3, 32, 4, 2, 1, one_hot_encode_nan_inputs=True
+            3, 32, 4, 2, 1, one_hot_encode_nan_inputs=True,
         )
         net = net.cuda()
         x = torch.randn((5, 3, 8), device='cuda')
@@ -108,17 +108,18 @@ class ModelsTest(unittest.TestCase):
 
         # Second, with exogenous
         net = tc.nn.EncoderDecoderTransformer(
-            3, 32, 4, 2, 1, exogenous_dim=7, one_hot_encode_nan_inputs=True
+            3, 32, 4, 2, 1, exogenous_dim=7, one_hot_encode_nan_inputs=True,
         )
         net = net.cuda()
         x_in = torch.randn((5, 3, 8), device='cuda')
-        x_out = torch.randn((5, 7, 7), device='cuda')
-        out = net(x_in, x_out=x_out)
+        exog_in = torch.randn((5, 7, 8), device='cuda')
+        exog_out = torch.randn((5, 7, 7), device='cuda')
+        out = net(x_in, exog_out=exog_out, exog_in=exog_in)
         self.assertEqual(out.shape, (5, 4, 7))
-        out = net(x_in, x_out=x_out, t_out=7)
+        out = net(x_in, exog_out=exog_out, t_out=7, exog_in=exog_in)
         self.assertEqual(out.shape, (5, 4, 7))
         t_in = torch.zeros((5, 1, 8), dtype=torch.int64, device='cuda')
-        out = net(x_in, x_out=x_out, t_in=t_in, t_out=7)
+        out = net(x_in, exog_out=exog_out, exog_in=exog_in, t_in=t_in, t_out=7)
         self.assertEqual(out.shape, (5, 4, 7))
         with self.assertRaises(ValueError):
             out = net(x, t_in=t_in, t_out=7)
@@ -127,7 +128,7 @@ class ModelsTest(unittest.TestCase):
         # Smoke test only
 
         net = tc.nn.EncoderTransformer(
-            3, 32, 4, 2, num_classes=10, one_hot_encode_nan_inputs=True
+            3, 32, 4, 2, num_classes=10, one_hot_encode_nan_inputs=True,
         )
         net = net.cuda()
         x = torch.randn((5, 3, 8), device='cuda')
@@ -146,17 +147,18 @@ class ModelsTest(unittest.TestCase):
 
         # Second, with exogenous
         net = tc.nn.EncoderTransformer(
-            3, 32, 4, 2, exogenous_dim=7, one_hot_encode_nan_inputs=True
+            3, 32, 4, 2, exogenous_dim=7, one_hot_encode_nan_inputs=True,
         )
         net = net.cuda()
         x_in = torch.randn((5, 3, 8), device='cuda')
-        x_out = torch.randn((5, 7, 7), device='cuda')
-        out = net(x_in, x_out=x_out)
+        exog_in = torch.randn((5, 7, 8), device='cuda')
+        exog_out = torch.randn((5, 7, 7), device='cuda')
+        out = net(x_in, exog_out=exog_out, exog_in=exog_in)
         self.assertEqual(out.shape, (5, 4, 7))
-        out = net(x_in, x_out=x_out, t_out=7)
+        out = net(x_in, exog_out=exog_out, exog_in=exog_in, t_out=7)
         self.assertEqual(out.shape, (5, 4, 7))
         t_in = torch.zeros((5, 1, 8), dtype=torch.int64, device='cuda')
-        out = net(x_in, x_out=x_out, t_in=t_in, t_out=7)
+        out = net(x_in, exog_out=exog_out, exog_in=exog_in, t_in=t_in, t_out=7)
         self.assertEqual(out.shape, (5, 4, 7))
         with self.assertRaises(ValueError):
             out = net(x, t_in=t_in, t_out=7)
