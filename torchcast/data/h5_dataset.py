@@ -107,7 +107,8 @@ class H5SeriesDataset(SeriesDataset):
             metadata (optional, list of :class:`Metadata`): If provided, should
             contain metadata about the series such as sequence names, channel
             names, etc. Should be a list of :class:`Metadata` objects of the
-            same length as the number of multiseries
+            same length as the number of multiseries. If not provided, the
+            metadata will attempt to be extracted from the HDF5 file.
         '''
         self.h5_file = h5py.File(path, 'r')
 
@@ -116,6 +117,15 @@ class H5SeriesDataset(SeriesDataset):
         for key in keys:
             if key not in self.h5_file:
                 raise ValueError(f'{key} not found in {path}')
+
+        # If metadata is not provided, try to extract from the file.
+        if metadata is None:
+            metadata = [
+                _extract_metadata_from_attrs(self.h5_file[k].attrs)
+                for k in keys
+            ]
+            if all(x is None for x in metadata):
+                metadata = None
 
         # H5View is used so we can index the dataset without calling the whole
         # thing into memory. Its __init__ method also handles issuing warnings
@@ -126,3 +136,27 @@ class H5SeriesDataset(SeriesDataset):
             transform=transform,
             metadata=metadata,
         )
+
+
+def _extract_metadata_from_attrs(attrs: h5py.AttributeManager) \
+        -> Optional[Metadata]:
+    '''
+    Extracts metadata for an :class:`h5py.Dataset` from the
+    :class:`h5py.AttributeManager`. Returns None if it is not available.
+    '''
+    name = attrs.get('name')
+    if 'channel_names' in attrs:
+        channel_names = attrs.get('channel_names').tolist()
+    else:
+        channel_names = None
+    if 'series_names' in attrs:
+        series_names = attrs.get('series_names').tolist()
+    else:
+        series_names = None
+
+    if all(x is None for x in (name, channel_names, series_names)):
+        return None
+
+    return Metadata(
+        name=name, channel_names=channel_names, series_names=series_names,
+    )

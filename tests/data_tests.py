@@ -1,13 +1,14 @@
 from contextlib import contextmanager
 import os
 import tempfile
-from typing import Dict
+from typing import Dict, Optional
 import unittest
 
 import h5py
 import numpy as np
 import torch
 import torchcast as tc
+from torchcast.data.h5_dataset import _extract_metadata_from_attrs
 
 
 class SeriesTest(unittest.TestCase):
@@ -312,7 +313,7 @@ class TensorSeriesTest(unittest.TestCase):
 class H5SeriesTest(unittest.TestCase):
     @staticmethod
     @contextmanager
-    def _create_h5_file(shapes: Dict):
+    def _create_h5_file(shapes: Dict, metadata: Optional[Dict] = None):
         with tempfile.TemporaryDirectory() as temp_root:
             path = os.path.join(temp_root, 'test.h5')
             with h5py.File(path, 'w') as h5_file:
@@ -321,6 +322,9 @@ class H5SeriesTest(unittest.TestCase):
                         h5_file[k] = v
                     else:
                         h5_file[k] = np.random.normal(0, 1, v)
+                    if not ((metadata is None) or (metadata.get(k) is None)):
+                        for m_k, m_v in metadata[k].items():
+                            h5_file[k].attrs[m_k] = m_v
 
             yield path
 
@@ -333,6 +337,7 @@ class H5SeriesTest(unittest.TestCase):
 
         with self._create_h5_file(data) as path:
             ds = tc.data.H5SeriesDataset(path, ('c', 'a'), return_length=2)
+            self.assertIs(ds.metadata, None)
             self.assertEqual(len(ds), 4)
             self.assertEqual(ds._time_ranges, [3, 3])
             self.assertEqual(ds.shape, (2, -1, 3))
@@ -381,6 +386,7 @@ class H5SeriesTest(unittest.TestCase):
 
         with self._create_h5_file(data) as path:
             ds = tc.data.H5SeriesDataset(path, ('c', 'a'))
+            self.assertIs(ds.metadata, None)
             self.assertEqual(len(ds), 2)
             self.assertEqual(ds._time_ranges, [3, 3])
             self.assertEqual(ds.shape, (2, -1, 3))
@@ -487,6 +493,58 @@ class H5SeriesTest(unittest.TestCase):
             self.assertTrue((np.array(ds_2.data[0]) == data_1[:, :, 4:]).all())
             self.assertEqual(ds_2.data[1].shape, (2, 3, 1))
             self.assertTrue((np.array(ds_2.data[1]) == data_2).all())
+
+    def test_h5_file_with_metadata(self):
+        # Test cases that must be handled:
+        # 1. NCT Dataset
+        data_1 = np.arange(30).reshape(2, 3, 5)
+        # 2. NC1 Dataset
+        data_2 = np.arange(6).reshape(2, 3, 1)
+        data = {'a': data_1, 'b': data_2}
+
+        metadata = {
+            'a': {'name': 'a', 'channel_names': ['a', 'b', 'c'],
+                  'series_names': ['d', 'e']},
+            'b': None
+        }
+
+        with self._create_h5_file(data, metadata=metadata) as path:
+            ds = tc.data.H5SeriesDataset(path, ('a', 'b'))
+            self.assertEqual(len(ds.metadata), 2)
+            self.assertTrue(ds.metadata[0].name, 'a')
+            self.assertTrue(ds.metadata[0].channel_names, ['a', 'b', 'c'])
+            self.assertTrue(ds.metadata[0].series_names, ['d', 'e'])
+            self.assertIs(ds.metadata[1], None)
+
+    def test_extract_metadata_from_attrs(self):
+        data_1 = np.arange(20).reshape(2, 2, 5)
+        data_2 = np.arange(4).reshape(2, 2, 1)
+        data = {'a': data_1, 'b': data_2}
+
+        for has_name in [True, False]:
+            for has_channel_names in [True, False]:
+                for has_series_names in [True, False]:
+                    metadata = {'a': {}}
+                    if has_name:
+                        metadata['a']['name'] = 'name'
+                    if has_channel_names:
+                        metadata['a']['channel_names'] = ['a', 'b']
+                    if has_series_names:
+                        metadata['a']['series_names'] = ['d', 'e']
+                    with self._create_h5_file(data, metadata=metadata) as path:
+                        with h5py.File(path, 'r') as h5_file:
+                            out = _extract_metadata_from_attrs(
+                                h5_file['a'].attrs
+                            )
+                    if any((has_name, has_channel_names, has_series_names)):
+                        if has_name:
+                            self.assertEqual(out.name, 'name')
+                        if has_channel_names:
+                            self.assertEqual(out.channel_names, ['a', 'b'])
+                        if has_series_names:
+                            self.assertEqual(out.series_names, ['d', 'e'])
+                    else:
+                        self.assertIs(out, None)
 
 
 class UtilsTest(unittest.TestCase):
