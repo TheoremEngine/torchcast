@@ -1,4 +1,4 @@
-## What is torchcast? <img align="right" src="docs/source/_static/torchcast_logo.png">
+## What is torchcast? <img align="right" src="docs/source/_static/torchcast_logo.png" width="100" height="100">
 
 torchcast is a library for time series forecasting, classification, and regression in PyTorch. It focuses primarily on making it easy to fetch, preprocess, and iterate over time series datasets. **It is still under heavy construction.**
 
