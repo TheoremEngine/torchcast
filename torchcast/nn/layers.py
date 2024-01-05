@@ -37,9 +37,11 @@ class PositionEmbedding(torch.nn.Module):
         divisor = (torch.arange(0, dim, 2) * (-log(10000.) / dim)).exp()
         self.register_buffer('divisor', divisor)
         self.scale = scale
+        self.linear = torch.nn.Conv1d(dim, dim, 1)
 
     def _init(self):
-        return
+        torch.nn.init.kaiming_normal_(self.linear.weight)
+        torch.nn.init.zeros_(self.linear.bias)
 
     def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         if (t.shape[2] != x.shape[2]):
@@ -47,7 +49,7 @@ class PositionEmbedding(torch.nn.Module):
         t = ((t - t[:, :, 0:1]) // self.scale).float()
         embed = (t * self.divisor.view(1, -1, 1))
         embed = torch.cat((embed.sin(), embed.cos()), dim=1)
-        return x + embed
+        return x + self.linear(embed)
 
 
 class TimeEmbedding(torch.nn.Module):
