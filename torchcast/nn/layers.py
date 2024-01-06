@@ -5,7 +5,8 @@ import pandas as pd
 import torch
 
 __all__ = [
-    'NaNEncoder', 'PositionEmbedding', 'TimeEmbedding', 'TimeLastLayerNorm'
+    'JointEmbedding', 'NaNEncoder', 'PositionEmbedding', 'TimeEmbedding',
+    'TimeLastLayerNorm'
 ]
 
 
@@ -24,6 +25,21 @@ class NaNEncoder(torch.nn.Module):
         return torch.cat((x, is_nan.to(x.dtype)), dim=1)
 
 
+class JointEmbedding(torch.nn.ModuleList):
+    '''
+    This takes a list of multiple embeddings and applies them sequentially to
+    the input sequence.
+    '''
+    def _init(self):
+        for embedding in self:
+            embedding._init()
+
+    def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        for embedding in self:
+            x = embedding(x, t)
+        return x
+
+
 class PositionEmbedding(torch.nn.Module):
     '''
     This layer attaches a positional embedding to the input sequence.
@@ -32,6 +48,8 @@ class PositionEmbedding(torch.nn.Module):
         '''
         Args:
             dim (int): Number of input channels.
+            scale (int): Expected average distance between time samples. This
+            is used to scale the embedding appropriately.
         '''
         super().__init__()
         divisor = (torch.arange(0, dim, 2) * (-log(10000.) / dim)).exp()
