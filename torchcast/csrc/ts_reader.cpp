@@ -257,10 +257,6 @@ py::tuple parse_ts_stream(std::istream& reader)
 
     // This will be the buffer holding the current line we're reading.
     std::string buff {};
-    // This will be a view on the buffer. We're never actually modifying the
-    // buffer, but we want to trim it as we parse different pieces, so it
-    // should be more efficient to do that on a string_view to prevent copying.
-    std::string_view buff_view {};
     // Dictionary that will hold attributes etc. to be returned.
     py::dict rtn_dict {};
     // Holds class names
