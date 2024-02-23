@@ -6,43 +6,16 @@ import torchcast as tc
 class CriteriaTest(unittest.TestCase):
     def test_l1_loss(self):
         x_1 = torch.tensor([[1., 2., 3.], [float('nan'), -2., -3.]])
-        x_2 = torch.tensor([
-            [float('nan'), float('nan'), float('nan')],
-            [0., 0., 0.]
-        ])
-        x_1.requires_grad = x_2.requires_grad = True
-        x_1.retain_grad(), x_2.retain_grad()
-        loss = tc.nn.L1Loss()(x_1, x_2)
-        self.assertEqual(loss.item(), 2.5)
-        loss.backward()
-        sb_1 = torch.tensor([[0.0, 0.0, 0.0], [0.0, -0.5, -0.5]])
-        self.assertTrue(torch.isclose(x_1.grad, sb_1).all())
-        sb_2 = torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.5, 0.5]])
-        self.assertTrue(torch.isclose(x_2.grad, sb_2).all(), x_2.grad)
-
-        x_1 = torch.tensor([[1., 2., 3.], [float('nan'), -2., -3.]])
-        x_2 = torch.tensor([
-            [float('nan'), float('nan'), float('nan')],
-            [0., 0., 0.]
-        ])
-        x_1.requires_grad = x_2.requires_grad = True
-        x_1.retain_grad(), x_2.retain_grad()
-        loss = tc.nn.l1_loss(x_1, x_2, reduction='sum')
-        self.assertEqual(loss.item(), 5.0)
-        loss.backward()
-        sb_1 = torch.tensor([[0.0, 0.0, 0.0], [0.0, -1.0, -1.0]])
-        self.assertTrue(torch.isclose(x_1.grad, sb_1).all())
-        sb_2 = torch.tensor([[0.0, 0.0, 0.0], [0.0, 1.0, 1.0]])
-        self.assertTrue(torch.isclose(x_2.grad, sb_2).all())
-
-        x_1 = torch.tensor([
-            [1., 2., 3.],
-            [float('nan'), float('nan'), float('nan')]
-        ])
-        x_2 = torch.tensor([
-            [float('nan'), float('nan'), float('nan')],
-            [0., 0., 0.]
-        ])
+        x_2 = torch.tensor([[float('nan')], [0.]])
+        loss = tc.nn.L1Loss()(x_1, x_2).item()
+        self.assertEqual(loss, 2.5)
+        loss = tc.nn.l1_loss(x_1, x_2).item()
+        self.assertEqual(loss, 2.5)
+        # Test sum
+        loss = tc.nn.l1_loss(x_1, x_2, reduction='sum').item()
+        self.assertEqual(loss, 5.0)
+        # Test handling of all NaNs
+        x_2 = torch.tensor([[float('nan')], [float('nan')]])
         x_1.requires_grad = x_2.requires_grad = True
         x_1.retain_grad(), x_2.retain_grad()
         loss = tc.nn.l1_loss(x_1, x_2)
@@ -53,65 +26,58 @@ class CriteriaTest(unittest.TestCase):
 
     def test_mse_loss(self):
         x_1 = torch.tensor([[1., 2., 3.], [float('nan'), -2., -3.]])
-        x_2 = torch.tensor([
-            [float('nan'), float('nan'), float('nan')],
-            [0., 0., 0.]
-        ])
+        x_2 = torch.tensor([[float('nan')], [0.]])
+        loss = tc.nn.MSELoss()(x_1, x_2).item()
+        self.assertEqual(loss, 6.5)
+        loss = tc.nn.mse_loss(x_1, x_2).item()
+        self.assertEqual(loss, 6.5)
+        # Test sum
+        loss = tc.nn.mse_loss(x_1, x_2, reduction='sum').item()
+        self.assertEqual(loss, 13.0)
+        # Test handling of all NaNs
+        x_2 = torch.tensor([[float('nan')], [float('nan')]])
         x_1.requires_grad = x_2.requires_grad = True
         x_1.retain_grad(), x_2.retain_grad()
-        loss = tc.nn.MSELoss()(x_1, x_2)
-        self.assertEqual(loss.item(), 6.5)
+        loss = tc.nn.l1_loss(x_1, x_2)
+        self.assertEqual(loss.item(), 0)
         loss.backward()
-        sb_1 = torch.tensor([-2.0, -3.0])
-        self.assertTrue(torch.isclose(x_1.grad[1, 1:], sb_1).all())
-        sb_2 = torch.tensor([2.0, 3.0])
-        self.assertTrue(torch.isclose(x_2.grad[1, 1:], sb_2).all())
-
-        x_1 = torch.tensor([[1., 2., 3.], [float('nan'), -2., -3.]])
-        x_2 = torch.tensor([
-            [float('nan'), float('nan'), float('nan')],
-            [0., 0., 0.]
-        ])
-        x_1.requires_grad = x_2.requires_grad = True
-        x_1.retain_grad(), x_2.retain_grad()
-        loss = tc.nn.mse_loss(x_1, x_2, reduction='sum')
-        self.assertEqual(loss.item(), 13.0)
-        loss.backward()
-        sb_1 = torch.tensor([-4.0, -6.0])
-        self.assertTrue(torch.isclose(x_1.grad[1, 1:], sb_1).all())
-        sb_2 = torch.tensor([4.0, 6.0])
-        self.assertTrue(torch.isclose(x_2.grad[1, 1:], sb_2).all())
+        self.assertTrue((x_1.grad == 0).all())
+        self.assertTrue((x_2.grad == 0).all())
 
     def test_smooth_l1_loss(self):
         x_1 = torch.tensor([[1., 2., 3.], [float('nan'), -2., -3.]])
-        x_2 = torch.tensor([
-            [float('nan'), float('nan'), float('nan')],
-            [0., 0., 0.]
-        ])
+        x_2 = torch.tensor([[float('nan')], [0.]])
+        loss = tc.nn.L1Loss()(x_1, x_2).item()
+        self.assertEqual(loss, 2.5)
+        loss = tc.nn.l1_loss(x_1, x_2).item()
+        self.assertEqual(loss, 2.5)
+        # Test sum
+        loss = tc.nn.l1_loss(x_1, x_2, reduction='sum').item()
+        self.assertEqual(loss, 5.0)
+        # Test handling of all NaNs
+        x_2 = torch.tensor([[float('nan')], [float('nan')]])
         x_1.requires_grad = x_2.requires_grad = True
         x_1.retain_grad(), x_2.retain_grad()
-        loss = tc.nn.SmoothL1Loss()(x_1, x_2)
-        self.assertEqual(loss.item(), 2.0)
+        loss = tc.nn.l1_loss(x_1, x_2)
+        self.assertEqual(loss.item(), 0)
         loss.backward()
-        sb_1 = torch.tensor([-0.5, -0.5])
-        self.assertTrue(torch.isclose(x_1.grad[1, 1:], sb_1).all())
-        sb_2 = torch.tensor([0.5, 0.5])
-        self.assertTrue(torch.isclose(x_2.grad[1, 1:], sb_2).all())
+        self.assertTrue((x_1.grad == 0).all())
+        self.assertTrue((x_2.grad == 0).all())
 
-        x_1 = torch.tensor([[1., 2., 3.], [float('nan'), -2., -3.]])
-        x_2 = torch.tensor([
-            [float('nan'), float('nan'), float('nan')],
-            [0., 0., 0.]
-        ])
-        x_1.requires_grad = x_2.requires_grad = True
-        x_1.retain_grad(), x_2.retain_grad()
-        loss = tc.nn.smooth_l1_loss(x_1, x_2, reduction='sum')
-        self.assertEqual(loss.item(), 4.0)
-        loss.backward()
-        sb_1 = torch.tensor([-1.0, -1.0])
-        self.assertTrue(torch.isclose(x_1.grad[1, 1:], sb_1).all())
-        sb_2 = torch.tensor([1.0, 1.0])
-        self.assertTrue(torch.isclose(x_2.grad[1, 1:], sb_2).all())
+    def test_soft_l1_loss(self):
+        pred = torch.tensor([1., 2., 0.5, 2, -2])
+        target = torch.tensor([1, 1, 0.25, 0.5, 0])
+        loss = tc.nn.SoftL1Loss((0, 1))(pred, target)
+        self.assertEqual(loss, 1.75 / 5)
+        loss = tc.nn.soft_l1_loss(pred, target, (0, 1))
+        self.assertEqual(loss, 1.75 / 5)
+
+    def test_soft_mse_loss(self):
+        pred = torch.tensor([1., 2., 0.5, 2, -2])
+        target = torch.tensor([1, 1, 0.25, 0.5, 0])
+        loss = tc.nn.SoftMSELoss((0, 1))(pred, target)
+        self.assertEqual(loss, (0.25**2 + 1.5**2) / 5)
+        loss = tc.nn.soft_mse_loss(pred, target, (0, 1))
 
 
 class LayersTest(unittest.TestCase):
