@@ -215,24 +215,3 @@ def _split_7_1_2(split: str, input_length: Optional[int],
 
     else:
         raise ValueError(split)
-
-
-def _stack_mismatched_tensors(tensors: List[torch.Tensor]) -> torch.Tensor:
-    '''
-    Stacks a collection of :class:`torch.Tensor`s along the 0th dimension,
-    where not every entry has the same shape. Each entry will be padded with
-    NaNs to the same size. We currently only support stacking 2-dimensional
-    :class:`torch.Tensor`s.
-    '''
-    tensors = [torch.as_tensor(x) for x in tensors]
-
-    # Create the output holder
-    shape = (len(tensors), *(max(s) for s in zip(*(t.shape for t in tensors))))
-    dtype, device = tensors[0].dtype, tensors[0].device
-    out = torch.full(shape, float('nan'), dtype=dtype, device=device)
-
-    # Fill it in.
-    for i, tensor in enumerate(tensors):
-        out[i, :tensor.shape[0], :tensor.shape[1]] = tensor
-
-    return out

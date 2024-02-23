@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import isclose, isnan
 import os
 import tempfile
@@ -43,6 +43,86 @@ class AirQualityTest(unittest.TestCase):
         self.assertEqual(ds.metadata[1].name, 'Data')
         self.assertEqual(ds.metadata[1].channel_names[0], 'CO(GT)')
         self.assertEqual(ds.metadata[1].series_names, None)
+
+
+class MonashTests(unittest.TestCase):
+    def test_bitcoin(self):
+        # Bitcoin is one of the special cases, since it is multivariate but is
+        # a single series.
+        ds = tc.datasets.MonashArchiveDataset('Bitcoin', 'all')
+
+        self.assertEqual(len(ds.data), 2)
+        self.assertEqual(ds.data[0].shape, (1, 1, 4581))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].shape, (1, 18, 4581))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+
+        self.assertTrue(isclose(ds.data[1][0, -1, -1].item(), 30593))
+        delta_t = ds.data[0][0, 0, 1:] - ds.data[0][0, 0, :-1]
+        self.assertTrue((delta_t == 24 * 60 * 60 * 1_000_000_000).all())
+
+    def test_cif_2016(self):
+        # CIF2016 is another special case, since it has variable horizon per
+        # series.
+        ds = tc.datasets.MonashArchiveDataset('CIF2016', 'test')
+
+        self.assertEqual(len(ds.data), 1)
+        self.assertEqual(ds.data[0].shape, (72, 1, 12))
+        self.assertEqual(ds.data[0].dtype, torch.float32)
+
+        self.assertEqual(ds.data[0][0, 0, 0], _to_float32(1657.01533755845))
+        self.assertEqual(ds.data[0][0, 0, -1], _to_float32(1683.41802153606))
+        self.assertEqual(ds.data[0][0].shape, (1, 12))
+        self.assertEqual(ds.data[0][-1, 0, 5], _to_float32(13058445.73))
+        self.assertEqual(ds.data[0][-1].shape, (1, 6))
+
+    def test_univariate(self):
+        ds = tc.datasets.MonashArchiveDataset('CarParts', 'train')
+
+        self.assertEqual(len(ds.data), 2)
+        self.assertEqual(ds.data[0].shape, (2674, 1, 51 - 12))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].shape, (2674, 1, 51 - 12))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+
+        self.assertTrue(isclose(ds.data[1][0, 0, 0], 0))
+        self.assertTrue(isnan(ds.data[1][0, 0, -1]))
+        self.assertTrue(isclose(ds.data[1][-1, 0, 0], 0))
+        self.assertTrue(isclose(ds.data[1][-1, 0, -1], 0))
+
+    def test_multivariate(self):
+        ds = tc.datasets.MonashArchiveDataset('Rideshare', 'all')
+
+        self.assertEqual(len(ds.data), 2)
+        self.assertEqual(ds.data[0].shape, (156, 1, 541))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].shape, (156, 15, 541))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+
+        self.assertTrue(isclose(ds.data[1][0, 0, 0], 9.0))
+        self.assertTrue(isclose(ds.data[1][0, 0, -1], 14.0))
+
+    def test_create_time_array(self):
+        start = datetime(1999, 1, 1)
+
+        cases = {
+            'yearly': datetime(2000, 1, 1),
+            'quarterly': datetime(1999, 4, 1),
+            'monthly': datetime(1999, 2, 1),
+            'weekly': datetime(1999, 1, 8),
+            'daily': datetime(1999, 1, 2),
+            'hourly': datetime(1999, 1, 1, hour=1),
+            'half_hourly': datetime(1999, 1, 1, minute=30),
+            '10_minutes': datetime(1999, 1, 1, minute=10),
+            '4_seconds': datetime(1999, 1, 1, second=4),
+        }
+
+        for freq, end in cases.items():
+            t = tc.datasets.monash._create_time_array(start, freq, 2)
+            self.assertTrue(isinstance(t, np.ndarray))
+            self.assertEqual(t.shape, (2,))
+            self.assertEqual(t.dtype, np.int64)
+            self.assertEqual(t[1], pd.Timestamp(end).value)
 
 
 class UCRTests(unittest.TestCase):
@@ -147,23 +227,6 @@ class UtilsTests(unittest.TestCase):
                 temp_root,
                 download=False
             )
-
-    def test_stack_mismatched_tensors(self):
-        tensors = [
-            torch.tensor([0., 3., 6.]).reshape(1, 3),
-            torch.tensor([0., 2.]).reshape(1, 2),
-            torch.tensor([[1., 1.], [1., 1.]])
-        ]
-        tensor = tc.datasets.utils._stack_mismatched_tensors(tensors)
-
-        self.assertEqual(tensor.shape, (3, 2, 3))
-        self.assertTrue((tensor[0, 0, :] == tensors[0]).all())
-        self.assertTrue(torch.isnan(tensor[0, 1, :]).all())
-        self.assertTrue((tensor[1, 0, :2] == tensors[1]).all())
-        self.assertTrue(torch.isnan(tensor[1, 0, 2]))
-        self.assertTrue(torch.isnan(tensor[1, 1, :]).all())
-        self.assertTrue((tensor[2, :, :2] == 1).all())
-        self.assertTrue(torch.isnan(tensor[2, :, 2]).all())
 
     def test_add_missing_values(self):
         df = pd.DataFrame({'a': [0, 3], 'b': [4, 5], 'c': [0, 0]})
@@ -285,6 +348,10 @@ class UtilsTests(unittest.TestCase):
             attrs['dat'],
             [datetime(2010, 1, 1, 0, 0, 0), datetime(2010, 1, 2, 0, 0, 0)]
         )
+
+
+def _to_float32(x: float) -> float:
+    return np.array([x], dtype=np.float32).item()
 
 
 if __name__ == '__main__':

@@ -65,7 +65,7 @@ class SeriesDataset(torch.utils.data.Dataset):
                     f'Length of metadata {len(metadata)} and number of '
                     f'multiseries {len(data)} do not match'
                 )
-            for md, ms in zip(metadata, data):
+            for md, ms in zip(metadata, self.data):
                 if md is not None:
                     md.check_consistency(ms)
         self.metadata = metadata

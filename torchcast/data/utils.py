@@ -23,6 +23,8 @@ class ListOfTensors:
     '''
     def __init__(self, tensors: List[ArrayLike]):
         self.tensors = [_coerce_to_series(x) for x in tensors]
+        if len({x.dtype for x in self.tensors}) > 1:
+            raise ValueError('Received multiple dtypes')
         if len({x.shape[0] for x in self.tensors}) != 1:
             raise ValueError(
                 f'Mismatch in tensor shapes: {[x.shape for x in self.tensors]}'
@@ -50,6 +52,10 @@ class ListOfTensors:
             raise IndexError(idx)
 
     @property
+    def dtype(self) -> torch.dtype:
+        return self.tensors[0].dtype
+
+    @property
     def ndim(self) -> int:
         return 3
 
@@ -68,11 +74,17 @@ def _coerce_to_multiseries(x: ArrayLike) -> Union[torch.Tensor, ListOfTensors]:
     if (
         isinstance(x, (list, tuple))
         and isinstance(x[0], (np.ndarray, torch.Tensor))
-        and len({_x.shape[-1] for _x in x}) > 1
     ):
-        return ListOfTensors(x)
+        if len({_x.shape[-1] for _x in x}) > 1:
+            # ListOfTensors.__init__ calls _coerce_to_series, which should
+            # handle shape checking
+            return ListOfTensors(x)
+        else:
+            # _coerce_to_series should handle shape checking
+            return torch.stack([_coerce_to_series(_x) for _x in x], dim=0)
 
     x = torch.as_tensor(x)
+
     if x.ndim == 1:
         warnings.warn(
             f'Received tensor of shape {x.shape}, assuming it is a single '
