@@ -1,24 +1,65 @@
-from typing import Iterator, Tuple
+from math import prod
+from typing import Iterator
 
 import torch
 import torch.nn.functional as f
 
 __all__ = [
     'l1_loss', 'L1Loss', 'mse_loss', 'MSELoss', 'smooth_l1_loss',
-    'SmoothL1Loss', 'soft_l1_loss', 'SoftL1Loss', 'soft_mse_loss',
-    'SoftMSELoss'
+    'SmoothL1Loss',
 ]
 
 
-class ZeroGrad(torch.autograd.Function):
+# The torch.nansum and torch.nanmean do not accurately backprop through the
+# non-NaN values. So we implement torch.autograd.Functions.
+
+
+class NaNSum(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, *tensors: torch.Tensor) -> torch.Tensor:
-        ctx.shapes = [x.shape for x in tensors]
-        return torch.zeros((), device=tensors[0].device)
+    def forward(ctx, tensor: torch.Tensor) -> torch.Tensor:
+        ctx.is_nan, ctx.shape = torch.isnan(tensor), tensor.shape
+        ctx.is_nan_all = ctx.is_nan.all()
+
+        if ctx.is_nan_all:
+            return torch.zeros((), device=tensor.device)
+        else:
+            return torch.nansum(tensor)
+
+    @staticmethod
+    def backward(ctx, grad: torch.Tensor) -> torch.Tensor:
+        if ctx.is_nan_all:
+            return torch.zeros(ctx.shape, dtype=grad.dtype, device=grad.device)
+        else:
+            grad = torch.full(
+                ctx.shape, grad.item(), dtype=grad.dtype, device=grad.device,
+            )
+            grad[ctx.is_nan] = 0
+            return grad
+
+
+class NaNMean(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, tensor: torch.Tensor) -> torch.Tensor:
+        ctx.is_nan, ctx.shape = torch.isnan(tensor), tensor.shape
+        ctx.is_nan_all = ctx.is_nan.all()
+
+        if ctx.is_nan_all:
+            return torch.zeros((), device=tensor.device)
+        else:
+            return torch.nanmean(tensor)
 
     @staticmethod
     def backward(ctx, grad: torch.Tensor) -> Iterator[torch.Tensor]:
-        return tuple(torch.zeros(s, device=grad.device) for s in ctx.shapes)
+        if ctx.is_nan_all:
+            return torch.zeros(ctx.shape, dtype=grad.dtype, device=grad.device)
+        else:
+            n_real = prod(ctx.shape) - ctx.is_nan.sum().item()
+            grad = torch.full(
+                ctx.shape, grad.item() / n_real, dtype=grad.dtype,
+                device=grad.device,
+            )
+            grad[ctx.is_nan] = 0
+            return grad
 
 
 def l1_loss(pred: torch.Tensor, target: torch.Tensor,
@@ -32,16 +73,12 @@ def l1_loss(pred: torch.Tensor, target: torch.Tensor,
         predictions and targets must be broadcastable.
         reduction (str): Form of reduction to apply. Choices: 'mean', 'sum'.
     '''
-    is_real = ~(torch.isnan(pred) | torch.isnan(target))
+    loss = f.l1_loss(pred, target, reduction='none')
 
-    if is_real.all():
-        return f.l1_loss(pred, target, reduction=reduction)
-    elif not is_real.any():
-        return ZeroGrad.apply(pred, target)
-    elif reduction == 'mean':
-        return torch.nanmean((pred - target).abs())
+    if reduction == 'mean':
+        return NaNMean.apply(loss)
     elif reduction == 'sum':
-        return torch.nansum((pred - target).abs())
+        return NaNSum.apply(loss)
     else:
         raise ValueError(reduction)
 
@@ -70,16 +107,12 @@ def mse_loss(pred: torch.Tensor, target: torch.Tensor,
         predictions and targets must be broadcastable.
         reduction (str): Form of reduction to apply. Choices: 'mean', 'sum'.
     '''
-    is_real = ~(torch.isnan(pred) | torch.isnan(target))
+    loss = f.mse_loss(pred, target, reduction='none')
 
-    if is_real.all():
-        return f.mse_loss(pred, target, reduction=reduction)
-    elif not is_real.any():
-        return ZeroGrad.apply(pred, target)
-    elif reduction == 'mean':
-        return torch.nanmean((pred - target)**2)
+    if reduction == 'mean':
+        return NaNMean.apply(loss)
     elif reduction == 'sum':
-        return torch.nansum((pred - target)**2)
+        return NaNSum.apply(loss)
     else:
         raise ValueError(reduction)
 
@@ -109,16 +142,14 @@ def smooth_l1_loss(pred: torch.Tensor, target: torch.Tensor,
         reduction (str): Form of reduction to apply. Choices: 'mean', 'sum'.
         beta (float): Boundary between L1 and L2 components.
     '''
-    is_real = ~(torch.isnan(pred) | torch.isnan(target))
+    loss = f.smooth_l1_loss(pred, target, reduction='none', beta=beta)
 
-    if is_real.all():
-        return f.smooth_l1_loss(pred, target, reduction=reduction, beta=beta)
-    elif not is_real.any():
-        return ZeroGrad.apply(pred, target)
+    if reduction == 'mean':
+        return NaNMean.apply(loss)
+    elif reduction == 'sum':
+        return NaNSum.apply(loss)
     else:
-        return f.smooth_l1_loss(
-            pred[is_real], target[is_real], reduction=reduction, beta=beta
-        )
+        raise ValueError(reduction)
 
 
 class SmoothL1Loss(torch.nn.Module):
@@ -135,79 +166,3 @@ class SmoothL1Loss(torch.nn.Module):
         return smooth_l1_loss(
             pred, target, reduction=self.reduction, beta=self.beta
         )
-
-
-def soft_l1_loss(pred: torch.Tensor, target: torch.Tensor,
-                 target_range: Tuple[float, float] = (0., 1.)):
-    '''
-    This is an L1 loss that ignores when inputs go out of range in the same
-    direction as the target. For example, if the range of inputs is [0, 1], and
-    the target is 1, and the prediction is 2, this will produce a loss of 0.
-    However, if the target was 0, this would produce a loss of 2.
-    '''
-    target_min, target_max = target_range
-    target = torch.where(
-        torch.minimum(target, pred) >= target_max,
-        pred,
-        target
-    )
-    target = torch.where(
-        torch.maximum(target, pred) <= target_min,
-        pred,
-        target
-    )
-    return l1_loss(pred, target)
-
-
-class SoftL1Loss(torch.nn.Module):
-    '''
-    This is an L1 loss that ignores when inputs go out of range in the same
-    direction as the target. For example, if the range of inputs is [0, 1], and
-    the target is 1, and the prediction is 2, this will produce a loss of 0.
-    However, if the target was 0, this would produce a loss of 2.
-    '''
-    def __init__(self, target_range: Tuple[float, float] = (0, 1)):
-        super().__init__()
-        self.target_range = target_range
-
-    def forward(self, pred: torch.Tensor, target: torch.Tensor) \
-            -> torch.Tensor:
-        return soft_l1_loss(pred, target, self.target_range)
-
-
-def soft_mse_loss(pred: torch.Tensor, target: torch.Tensor,
-                  target_range: Tuple[float, float] = (0., 1.)):
-    '''
-    This is an MSE loss that ignores when inputs go out of range in the same
-    direction as the target. For example, if the range of inputs is [0, 1], and
-    the target is 1, and the prediction is 2, this will produce a loss of 0.
-    However, if the target was 0, this would produce a loss of 4.
-    '''
-    target_min, target_max = target_range
-    target = torch.where(
-        torch.minimum(target, pred) >= target_max,
-        pred,
-        target
-    )
-    target = torch.where(
-        torch.maximum(target, pred) <= target_min,
-        pred,
-        target
-    )
-    return mse_loss(pred, target)
-
-
-class SoftMSELoss(torch.nn.Module):
-    '''
-    This is a mean-squared error loss that ignores when inputs go out of range
-    in the same direction as the target. For example, if the range of inputs is
-    [0, 1], and the target is 1, and the prediction is 2, this will produce a
-    loss of 0. However, if the target was 0, this would produce a loss of 4.
-    '''
-    def __init__(self, target_range: Tuple[float, float] = (0, 1)):
-        super().__init__()
-        self.target_range = target_range
-
-    def forward(self, pred: torch.Tensor, target: torch.Tensor) \
-            -> torch.Tensor:
-        return soft_mse_loss(pred, target, self.target_range)
