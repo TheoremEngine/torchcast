@@ -30,7 +30,7 @@ if __name__ == '__main__':
              'torchcast/csrc/utils.cpp',
              'torchcast/csrc/ts_reader.cpp',
              'torchcast/csrc/tsf_reader.cpp'],
-            cxx_std="2a",
+            cxx_std=17,
             extra_compile_args=COMPILE_ARGS,
         ),
     ]

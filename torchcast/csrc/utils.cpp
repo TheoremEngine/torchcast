@@ -104,7 +104,7 @@ bool parse_class_names(std::string_view& buff_view,
     if (buff_view == "false")
         return false;
 
-    if (!buff_view.starts_with("true "))
+    if (buff_view.rfind("true ", 0) != 0)
         raise_py_error(
             PyExc_ValueError,
             "Parse error: " + static_cast<std::string>(buff_view)
@@ -191,7 +191,7 @@ void parse_header(std::istream& reader, py::dict& rtn,
         {
             // Iterate through candidate keys until we find the right one.
             std::string_view key { std::get<0>(allowed_keys[i]) };
-            if (buff_view.starts_with(key))
+            if (buff_view.rfind(key, 0) == 0)
             {
                 if (buff_view.length() <= key.length() + 1)
                     raise_py_error(
