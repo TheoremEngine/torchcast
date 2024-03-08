@@ -42,9 +42,7 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
 
         https://github.com/zhouhaoyi/ETDataset
 
-    This implementation is based on:
-
-        https://github.com/cure-lab/LTSF-Linear
+    This is sometimes abbreviated as the `ETT` dataset.
     '''
     def __init__(self, path: Optional[str] = None, task: str = '15min',
                  split: str = 'all', download: Union[bool, str] = True,
@@ -56,25 +54,27 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
         '''
         Args:
             path (optional, str): Path to find the dataset at. This should be a
-            directory, as the dataset consists of multiple files.
+                directory, as the dataset consists of multiple files.
             task (str): Whether to retrieve the hourly dataset or the every 15
-            minute dataset, and whether to retrieve one file or two. Choices:
-            'hourly', 'hourly-1', 'hourly-2', '15min', '15min-1', '15min-2'.
+                minute dataset, and whether to retrieve one file or two.
+                Choices: 'hourly', 'hourly-1', 'hourly-2', '15min', '15min-1',
+                '15min-2'.
             split (str): What split of the data to return. The splits are taken
-            from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
+                from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             download (bool or str): Whether to download the dataset if it is
-            not already available. Choices: True, False, 'force'.
+                not already available. Choices: True, False, 'force'.
             scale (bool): Whether to normalize the data, as in the benchmark.
             columns_as_channels (bool): If true, each column is treated as a
-            separate channel. If false, each column is treated as a separate
-            series.
+                separate channel. If false, each column is treated as a
+                separate series.
             transform (optional, callable): Pre-processing functions to apply
-            before returning.
+                before returning.
             input_margin (optional, int): The amount of margin to include on
-            the left-hand side of the dataset, as it is used as an input to the
-            model.
+                the left-hand side of the dataset, as it is used as an input to
+                the model.
             return_length (optional, int): If provided, the length of the
-            sequence to return. If not provided, returns an entire sequence.
+                sequence to return. If not provided, returns an entire
+                sequence.
         '''
         if task not in ETT_FILE_NAMES:
             raise ValueError(task)

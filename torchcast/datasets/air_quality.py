@@ -25,11 +25,12 @@ class AirQualityDataset(TensorSeriesDataset):
         Args:
             path (optional, str): Path to find the dataset at.
             download (bool or str): Whether to download the dataset if it is
-            not already available. Can be true, false, or 'force'.
+                not already available. Can be true, false, or 'force'.
             transform (optional, callable): Pre-processing functions to apply
-            before returning.
+                before returning.
             return_length (optional, int): If provided, the length of the
-            sequence to return. If not provided, returns an entire sequence.
+                sequence to return. If not provided, returns an entire
+                sequence.
         '''
         buff = _download_and_extract(
             AIR_QUALITY_URL,

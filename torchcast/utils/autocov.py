@@ -22,7 +22,7 @@ def autocorrelation(series: torch.Tensor, n_lags: Optional[int] = None,
 
     .. math::
 
-        \\mbox{Autocorr}(x)_k = \\mbox{Autocov}(x)_k / \\Var(x)
+        \\mbox{Autocorr}(x)_k = \\mbox{Autocov}(x)_k / \\mbox{Var}(x)
 
     For a multivariate series, this returns only the autocorrelations of each
     channel to itself. The autocorrelation is returned as a 2-dimensional
@@ -31,19 +31,20 @@ def autocorrelation(series: torch.Tensor, n_lags: Optional[int] = None,
 
     Args:
         series (:class:`torch.Tensor`): The series to find the autocorrelation
-        of.
+            of.
         n_lags (optional, int): Number of lags. If not set, return all lags.
         adjusted (bool): If set, use (n - k) in the denominator instead of n.
-        The adjusted estimator has lower bias but typically has worse mean
-        squared error.
+            The adjusted estimator has lower bias but typically has worse mean
+            squared error.
         dim (int): Dimension indexing time in the series.
         batch_dim (optional, int or iterator of int): Dimensions indexing the
-        batches. If provided, we assume that each row along these dimensions is
-        a different sample from the same underlying distribution.
+            batches. If provided, we assume that each row along these
+            dimensions is a different sample from the same underlying
+            distribution.
         use_fft (optional, bool): Allows user to specify explicitly whether to
-        use the FFT in the calculation. FFT is generally faster for longer time
-        series, and slower for shorter ones. If not set, then we infer from the
-        size of the data.
+            use the FFT in the calculation. FFT is generally faster for longer
+            time series, and slower for shorter ones. If not set, then we infer
+            from the size of the data.
     '''
     # autocov will be in shape CT coming out of autocovariance.
     autocov = autocovariance(
@@ -79,19 +80,20 @@ def autocovariance(series: torch.Tensor, n_lags: Optional[int] = None,
 
     Args:
         series (:class:`torch.Tensor`): The series to find the autocovariance
-        of.
+            of.
         n_lags (optional, int): Number of lags. If not set, return all lags.
         adjusted (bool): If set, use (n - k) in the denominator instead of n.
-        The adjusted estimator has lower bias but typically has worse mean
-        squared error.
+            The adjusted estimator has lower bias but typically has worse mean
+            squared error.
         dim (int): Dimension indexing time in the series.
         batch_dim (optional, int or iterator of int): Dimensions indexing the
-        batches. If provided, we assume that each row along these dimensions is
-        a different sample from the same underlying distribution.
+            batches. If provided, we assume that each row along these
+            dimensions is a different sample from the same underlying
+            distribution.
         use_fft (optional, bool): Allows user to specify explicitly whether to
-        use the FFT in the calculation. FFT is generally faster for longer time
-        series, and slower for shorter ones. If not set, then we infer from the
-        size of the data.
+            use the FFT in the calculation. FFT is generally faster for longer
+            time series, and slower for shorter ones. If not set, then we infer
+            from the size of the data.
     '''
     # Implementation is based closely on statsmodels.tsa.stattools.acovf.
 
@@ -191,19 +193,20 @@ def partial_autocorrelation(series: torch.Tensor, n_lags: Optional[int] = None,
 
     Args:
         series (:class:`torch.Tensor`): The series to find the partial
-        autocorrelation of.
+            autocorrelation of.
         n_lags (optional, int): Number of lags. If not set, return all lags.
         adjusted (bool): If set, use (n - k) in the denominator instead of n.
-        The adjusted estimator has lower bias but typically has worse mean
-        squared error.
+            The adjusted estimator has lower bias but typically has worse mean
+            squared error.
         dim (int): Dimension indexing time in the series.
         batch_dim (optional, int or iterator of int): Dimensions indexing the
-        batches. If provided, we assume that each row along these dimensions is
-        a different sample from the same underlying distribution.
+            batches. If provided, we assume that each row along these
+            dimensions is a different sample from the same underlying
+            distribution.
         use_fft (optional, bool): Allows user to specify explicitly whether to
-        use the FFT in the calculation. FFT is generally faster for longer time
-        series, and slower for shorter ones. If not set, then we infer from the
-        size of the data.
+            use the FFT in the calculation. FFT is generally faster for longer
+            time series, and slower for shorter ones. If not set, then we infer
+            from the size of the data.
     '''
     # We apply the Yule-Walker method, see p. 84 of Box, Jenkins, et al, "Time
     # Series Analysis", 5th edition. Specifically, equations A3.2.7 and A3.2.8
@@ -281,13 +284,13 @@ def _lag_prod_sum_dot(series: torch.Tensor, n_lags: int) -> torch.Tensor:
 
     Args:
         series (:class:`torch.Tensor`): The series to find the sum of the
-        lagged products for. This is expected to be in NCT arrangement, where
-        the 0th dimension indexs the batch, the 1st dimension indexs the
-        channel, and the 2nd dimension indexs the time. We assume that each
-        batch is a separate instantiation of the same process, and so the
-        sum is found jointly over all the batches. We assume that the series
-        has already been de-meaned and, if the series contains any invalid/NaN
-        entries, they have been replaced with 0s.
+            lagged products for. This is expected to be in NCT arrangement,
+            where the 0th dimension indexs the batch, the 1st dimension indexs
+            the channel, and the 2nd dimension indexs the time. We assume that
+            each batch is a separate instantiation of the same process, and so
+            the sum is found jointly over all the batches. We assume that the
+            series has already been de-meaned and, if the series contains any
+            invalid/NaN entries, they have been replaced with 0s.
         n_lags (int): The number of lags to calculate the autocovariance for.
     '''
     N, C, T = series.shape
@@ -341,13 +344,13 @@ def _lag_prod_sum_fft(series: torch.Tensor, n_lags: int) -> torch.Tensor:
 
     Args:
         series (:class:`torch.Tensor`): The series to find the sum of the
-        lagged products for. This is expected to be in NCT arrangement, where
-        the 0th dimension indexs the batch, the 1st dimension indexs the
-        channel, and the 2nd dimension indexs the time. We assume that each
-        batch is a separate instantiation of the same process, and so the
-        sum is found jointly over all the batches. We assume that the series
-        has already been de-meaned and, if the series contains any invalid/NaN
-        entries, they have been replaced with 0s.
+            lagged products for. This is expected to be in NCT arrangement,
+            where the 0th dimension indexs the batch, the 1st dimension indexs
+            the channel, and the 2nd dimension indexs the time. We assume that
+            each batch is a separate instantiation of the same process, and so
+            the sum is found jointly over all the batches. We assume that the
+            series has already been de-meaned and, if the series contains any
+            invalid/NaN entries, they have been replaced with 0s.
         n_lags (int): The number of lags to calculate the autocovariance for.
     '''
     # The FFT series will be:

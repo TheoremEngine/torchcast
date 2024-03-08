@@ -42,26 +42,27 @@ class GermanWeatherDataset(TensorSeriesDataset):
         '''
         Args:
             path (optional, str): Path to find the dataset at. This should be a
-            directory, as the dataset consists of at least two files.
+                directory, as the dataset consists of at least two files.
             year (int or iterable of int): The year or years of data to
-            download. Choices: 2003 to present.
+                download. Choices: 2003 to present.
             site: (str or iterable of str): The site or sites of data to
-            retrieve. Choices: 'beutenberg', 'saaleaue', 'versuchsbeete'.
+                retrieve. Choices: 'beutenberg', 'saaleaue', 'versuchsbeete'.
             split (str): What split of the data to return. The splits are taken
-            from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
+                from Zeng et al. Choices: 'all', 'train', 'val', 'test'.
             download (bool or str): Whether to download the dataset if it is
-            not already available. Choices: True, False, 'force'.
+                not already available. Choices: True, False, 'force'.
             transform (optional, callable): Pre-processing functions to apply
-            before returning.
+                before returning.
             scale (bool): Whether to normalize the data, as in the benchmark.
             columns_as_channels (bool): If true, each column is treated as a
-            separate channel. If false, each column is treated as a separate
-            series.
+                separate channel. If false, each column is treated as a
+                separate series.
             input_margin (optional, int): The amount of margin to include on
-            the left-hand side of the dataset, as it is used as an input to the
-            model.
+                the left-hand side of the dataset, as it is used as an input to
+                the model.
             return_length (optional, int): If provided, the length of the
-            sequence to return. If not provided, returns an entire sequence.
+                sequence to return. If not provided, returns an entire
+                sequence.
         '''
         if isinstance(year, int):
             year = [year]

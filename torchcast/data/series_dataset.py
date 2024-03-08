@@ -11,7 +11,14 @@ __all__ = ['Metadata', 'SeriesDataset']
 @dataclass
 class Metadata:
     '''
-    :class:`Metadata` encapsulates metadata about a multiseries.
+    :class:`Metadata` encapsulates metadata about a multiseries. In a
+    :class:`torchcast.data.SeriesDataset`, each multiseries will have a
+    corresponding :class:`Metadata` object. All fields of :class:`Metadata` are
+    optional. The fields that may be available are:
+    
+     * name: Name of the series.
+     * channel_names: A list of the names of each channel.
+     * series_names: A list of the names of each series.
     '''
     name: Optional[str] = None
     channel_names: Optional[List[str]] = None
@@ -38,21 +45,30 @@ class Metadata:
 
 
 class SeriesDataset(torch.utils.data.Dataset):
+    '''
+    This is a base class for time series datasets. It is expected to only be
+    used in a subclass, such as :class:`torchcast.data.TensorSeriesDataset`.
+
+    Data held by a :class:`SeriesDataset` is always returned in shape
+    (channels, time steps), so that it can be stacked to form a batch of series
+    in shape (series, channels, time steps).
+    '''
     def __init__(self, *data: ArrayLike, return_length: Optional[int] = None,
                  transform: Optional[Callable] = None,
                  metadata: Optional[Union[Metadata, List[Metadata]]] = None):
         '''
         Args:
             data: The objects storing the underlying multiseries. The type will
-            depend on the subclass, but should be array-like.
+                depend on the subclass, but should be array-like.
             transform (optional, callable): Pre-processing functions to apply
-            before returning.
+                before returning.
             return_length (optional, int): If provided, the length of the
-            sequence to return. If not provided, returns an entire sequence.
+                sequence to return. If not provided, returns an entire
+                sequence.
             metadata (optional, list of :class:`Metadata`): If provided, should
-            contain metadata about the series such as sequence names, channel
-            names, etc. Should be a list of :class:`Metadata` objects of the
-            same length as the number of multiseries
+                contain metadata about the series such as sequence names,
+                channel names, etc. Should be a list of :class:`Metadata`
+                objects of the same length as the number of multiseries.
         '''
         self.data = self._coerce_inputs(*data)
         self.transform = transform

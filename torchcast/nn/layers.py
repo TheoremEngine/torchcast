@@ -12,9 +12,9 @@ __all__ = [
 
 class NaNEncoder(torch.nn.Module):
     '''
-    This module replaces NaN values in tensors with random values, and
-    appends a mask along the channel dimension specifying which values were
-    NaNs. It is used as a preprocessing step.
+    This module replaces NaN values in tensors with zeros, and appends a mask
+    along the channel dimension specifying which values were NaNs, doubling the
+    number of channels. It is used as a preprocessing step.
     '''
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
@@ -27,8 +27,8 @@ class NaNEncoder(torch.nn.Module):
 
 class JointEmbedding(torch.nn.ModuleList):
     '''
-    This takes a list of multiple embeddings and applies them sequentially to
-    the input sequence.
+    This takes a list of multiple time embeddings and applies them sequentially
+    to the input sequence.
     '''
     def _init(self):
         for embedding in self:

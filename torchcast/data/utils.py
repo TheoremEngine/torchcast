@@ -17,7 +17,8 @@ class ArrayLike(Protocol):
 
 class ListOfTensors:
     '''
-    This class encapsulates a list of :class:`torch.Tensor`. This is used so
+    This class encapsulates a list of :class:`torch.Tensor`, and gives it an
+    external API similar to a single :class:`torch.Tensor`. This is used so
     that we can have a single multiseries whose constituent series are varying
     lengths without wasting memory.
     '''

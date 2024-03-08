@@ -49,7 +49,7 @@ def l1_loss(pred: torch.Tensor, target: torch.Tensor,
     Args:
         pred (:class:`torch.Tensor`): Predictions.
         target (:class:`torch.Tensor`): Targets for the predictions. The
-        predictions and targets must be broadcastable.
+            predictions and targets must be broadcastable.
         reduction (str): Form of reduction to apply. Choices: 'mean', 'sum'.
     '''
     pred, target = NaNMask.apply(pred), NaNMask.apply(target)
@@ -88,7 +88,7 @@ def mse_loss(pred: torch.Tensor, target: torch.Tensor,
     Args:
         pred (:class:`torch.Tensor`): Predictions.
         target (:class:`torch.Tensor`): Targets for the predictions. The
-        predictions and targets must be broadcastable.
+            predictions and targets must be broadcastable.
         reduction (str): Form of reduction to apply. Choices: 'mean', 'sum'.
     '''
     pred, target = NaNMask.apply(pred), NaNMask.apply(target)
@@ -127,7 +127,7 @@ def smooth_l1_loss(pred: torch.Tensor, target: torch.Tensor,
     Args:
         pred (:class:`torch.Tensor`): Predictions.
         target (:class:`torch.Tensor`): Targets for the predictions. The
-        predictions and targets must be broadcastable.
+            predictions and targets must be broadcastable.
         reduction (str): Form of reduction to apply. Choices: 'mean', 'sum'.
         beta (float): Boundary between L1 and L2 components.
     '''

@@ -25,21 +25,22 @@ class EncoderDecoderTransformer(torch.nn.Module):
             hidden_dim (int): Number of channels in hidden layers.
             out_dim (int): Number of channels in the output time series.
             num_encoder_layers (int): Number of transformer layers in the
-            encoder.
+                encoder.
             num_decoder_layers (int): Number of transformer layers in the
-            decoder.
+                decoder.
             exogenous_dim (int): The number of channels in the exogenous data
-            used as additional inputs for the output tokens.
+                used as additional inputs for the output tokens.
             num_heads (int): Number of heads per transformer.
             one_hot_encode_nan_inputs (bool): If provided, expect NaNs to be in
-            inputs, and use one-hot encoding prior to the projection to handle
-            them.
+                inputs, and use one-hot encoding prior to the projection to
+                handle them.
             dropout (float): Dropout probability.
             embedding (optional, :class:`torch.nn.Module`): A time embedding
-            layer. If not provided, a :class:`PositionEmbedding` will be used.
+                layer. If not provided, a :class:`PositionEmbedding` will be
+                used.
             norm (callable): A function for constructing a normalization layer.
-            This should expect the dimension as an argument and return the
-            layer.
+                This should expect the dimension as an argument and return the
+                layer.
         '''
         super().__init__()
 
@@ -103,16 +104,17 @@ class EncoderDecoderTransformer(torch.nn.Module):
         Args:
             x_in (:class:`torch.Tensor`): The time series observed so far.
             t_in (optional, :class:`torch.Tensor`): The times of the time
-            series observed so far. If not provided, integer time steps will be
-            used.
+                series observed so far. If not provided, integer time steps
+                will be used.
             exog_in (optional, :class:`torch.Tensor`): The exogenous data for
-            the observed time series.
+                the observed time series.
             t_out (optional, int or :class:`torch.Tensor`): The times of the
-            time series to be forecasted. If an integer is provided, integer
-            time steps will be used. If not provided, x_out must be provided,
-            and the number of time steps will be inferred from its shape.
+                time series to be forecasted. If an integer is provided,
+                integer time steps will be used. If not provided, x_out must be
+                provided, and the number of time steps will be inferred from
+                its shape.
             exog_out (optional, :class:`torch.Tensor`): The exogenous data for
-            the forecast region of the time series.
+                the forecast region of the time series.
         '''
         # Apply NaN encoding
         if self.nan_encoder is not None:
@@ -187,22 +189,23 @@ class EncoderTransformer(torch.nn.Module):
             hidden_dim (int): Number of channels in hidden layers.
             out_dim (int): Number of channels in the output time series.
             num_encoder_layers (int): Number of transformer layers in the
-            encoder.
+                encoder.
             num_classes (int): If provided, include a classifier
-            token predicting this many classes.
+                token predicting this many classes.
             exogenous_dim (int): The number of channels in the exogenous data
-            used as additional inputs for the output tokens.
+                used as additional inputs for the output tokens.
             num_heads (int): Number of heads per transformer.
             token_size (int): Spatial width of each token.
             one_hot_encode_nan_inputs (bool): If provided, expect NaNs to be in
-            inputs, and use one-hot encoding prior to the projection to handle
-            them.
+                inputs, and use one-hot encoding prior to the projection to
+                handle them.
             dropout (float): Dropout probability.
             embedding (optional, :class:`torch.nn.Module`): A time embedding
-            layer. If not provided, a :class:`PositionEmbedding` will be used.
+                layer. If not provided, a :class:`PositionEmbedding` will be
+                used.
             norm (callable): A function for constructing a normalization layer.
-            This should expect the dimension as an argument and return the
-            layer.
+                This should expect the dimension as an argument and return the
+                layer.
         '''
         super().__init__()
 
@@ -276,16 +279,17 @@ class EncoderTransformer(torch.nn.Module):
         Args:
             x_in (:class:`torch.Tensor`): The time series observed so far.
             t_in (optional, :class:`torch.Tensor`): The times of the time
-            series observed so far. If not provided, integer time steps will be
-            used.
+                series observed so far. If not provided, integer time steps
+                will be used.
             exog_in (optional, :class:`torch.Tensor`): The exogenous data for
-            the observed time series.
+                the observed time series.
             t_out (optional, int or :class:`torch.Tensor`): The times of the
-            time series to be forecasted. If an integer is provided, integer
-            time steps will be used. If not provided, x_out must be provided,
-            and the number of time steps will be inferred from its shape.
+                time series to be forecasted. If an integer is provided,
+                integer time steps will be used. If not provided, x_out must be
+                provided, and the number of time steps will be inferred from
+                its shape.
             exog_out (optional, :class:`torch.Tensor`): The exogenous data for
-            the forecast region of the time series.
+                the forecast region of the time series.
         '''
         # Apply NaN encoding
         if self.nan_encoder is not None:

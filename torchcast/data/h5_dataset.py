@@ -101,14 +101,15 @@ class H5SeriesDataset(SeriesDataset):
             path (str): Path to the HDF5 file.
             keys (list of str): The keys in the file to return.
             return_length (optional, int): Length of the sequence to be
-            returned when the dataset is sampled.
+                returned when the dataset is sampled.
             transform (optional, callable): Pre-processing functions to apply
-            before returning.
+                before returning.
             metadata (optional, list of :class:`Metadata`): If provided, should
-            contain metadata about the series such as sequence names, channel
-            names, etc. Should be a list of :class:`Metadata` objects of the
-            same length as the number of multiseries. If not provided, the
-            metadata will attempt to be extracted from the HDF5 file.
+                contain metadata about the series such as sequence names,
+                channel names, etc. Should be a list of :class:`Metadata`
+                objects of the same length as the number of multiseries. If not
+                provided, the metadata will attempt to be extracted from the
+                HDF5 file.
         '''
         self.h5_file = h5py.File(path, 'r')
 

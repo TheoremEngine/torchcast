@@ -22,8 +22,8 @@ class Decoder(torch.nn.ModuleList):
             hidden_dim (int): Channel dimension of the hidden layers.
             dropout (float): Dropout probability.
             norm (callable): A function for constructing a normalization layer.
-            This should expect the dimension as an argument and return the
-            layer.
+                This should expect the dimension as an argument and return the
+                layer.
         '''
         hidden_dim = hidden_dim or (dim * 4)
         super().__init__([
@@ -131,8 +131,8 @@ class Encoder(torch.nn.ModuleList):
             hidden_dim (int): Channel dimension of the hidden layers.
             dropout (float): Dropout probability.
             norm (callable): A function for constructing a normalization layer.
-            This should expect the dimension as an argument and return the
-            layer.
+                This should expect the dimension as an argument and return the
+                layer.
         '''
         hidden_dim = hidden_dim or (dim * 4)
         super().__init__([
@@ -168,8 +168,8 @@ class EncoderLayer(torch.nn.Module):
             hidden_dim (int): Channel dimension of the hidden layers.
             dropout (float): Dropout probability.
             norm (callable): A function for constructing a normalization layer.
-            This should expect the dimension as an argument and return the
-            layer.
+                This should expect the dimension as an argument and return the
+                layer.
         '''
         super().__init__()
 
@@ -203,7 +203,7 @@ class EncoderLayer(torch.nn.Module):
         '''
         Args:
             x (:class:`torch.Tensor`): The input sequence to be decoded. This
-            should be in arrangement NCT.
+                should be in arrangement NCT.
         '''
         # Our normalization layers expect the tensor in NCT arrangement, as is
         # standard, while our other layers expect the tensor in NTC

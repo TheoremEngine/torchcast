@@ -117,11 +117,12 @@ class MonashArchiveDataset(TensorSeriesDataset):
             task (str): Which dataset to retrieve.
             path (optional, str): Path to find the dataset at.
             download (bool or str): Whether to download the dataset if it is
-            not already available. Can be true, false, or 'force'.
+                not already available. Can be true, false, or 'force'.
             transform (optional, callable): Pre-processing functions to apply
-            before returning.
+                before returning.
             return_length (optional, int): If provided, the length of the
-            sequence to return. If not provided, returns an entire sequence.
+                sequence to return. If not provided, returns an entire
+                sequence.
         '''
         if split not in {'all', 'train', 'test'}:
             raise ValueError(f'Did not recognize split {split}')
