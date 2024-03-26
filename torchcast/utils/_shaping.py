@@ -1,13 +1,15 @@
 from math import prod
-from typing import Callable, Iterator, Optional, Union
+from typing import Callable, Iterable, Optional, Union
 
 import torch
 
 
+OneOrMoreDims = Union[int, Iterable[int]]
+
+
 def _ensure_nct(series: torch.Tensor, time_dim: int = -1,
-                batch_dim: Optional[Union[int, Iterator[int]]] = None,
-                keepdim: bool = False) \
-        -> (torch.Tensor, Callable):
+                batch_dim: Optional[OneOrMoreDims] = None,
+                keepdim: bool = False) -> (torch.Tensor, Callable):
     '''
     Given an input series, permutes and rearranges it to ensure it is in NCT
     arrangement. Returns the series as a :class:`torch.Tensor`, along with a
@@ -67,3 +69,23 @@ def _ensure_nct(series: torch.Tensor, time_dim: int = -1,
         return x
 
     return series, restore_shape
+
+
+def _sliding_window_view(x: torch.Tensor, window_size: int, dim: int = -1) \
+        -> torch.Tensor:
+    '''
+    Given an input tensor, uses stride tricks to create a tensor
+    '''
+    if (x.ndim < dim) or (x.shape[dim] < window_size):
+        raise ValueError(
+            f'Tensor shape {x.shape} does not support window of size '
+            f'{window_size} on dimension {dim}'
+        )
+
+    shape = (
+        *x.shape[:dim], x.shape[dim] + 1 - window_size, window_size,
+        *x.shape[dim + 1:]
+    )
+    stride = x.stride()
+    stride = (*stride[:dim], stride[dim], stride[dim], *stride[dim + 1:])
+    return torch.as_strided(x, size=shape, stride=stride)

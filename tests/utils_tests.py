@@ -212,6 +212,19 @@ class ShapingTests(unittest.TestCase):
             (orig_x.mean((1, 3)), rtn_x)
         )
 
+    def test_sliding_window_view(self):
+        x = torch.arange(60).view(5, 4, 3)
+        win_x = tc.utils._shaping._sliding_window_view(x, 3, 1)
+
+        self.assertEqual(win_x.shape, (5, 2, 3, 3))
+        self.assertTrue((win_x[:, 0, :, :] == x[:, 0:3, :]).all())
+        self.assertTrue((win_x[:, 1, :, :] == x[:, 1:4, :]).all())
+
+        win2_x = tc.utils._shaping._sliding_window_view(win_x, 2, 2)
+        self.assertEqual(win2_x.shape, (5, 2, 2, 2, 3))
+        self.assertTrue((win2_x[:, :, 0, :, :] == win_x[:, :, 0:2, :]).all())
+        self.assertTrue((win2_x[:, :, 1, :, :] == win_x[:, :, 1:3, :]).all())
+
 
 if __name__ == '__main__':
     unittest.main()
