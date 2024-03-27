@@ -174,8 +174,8 @@ class SeriesDataset(torch.utils.data.Dataset):
 
         Args:
             t (int or float): If this is an integer, then perform the split at
-            this time. If it is a float, perform the split at this percentage
-            of the time.
+                this time. If it is a float, perform the split at this
+                percentage of the time.
         '''
         def _split_by_time(ms: ArrayLike, t: Union[int, float]):
             if ms.shape[2] == 1:
