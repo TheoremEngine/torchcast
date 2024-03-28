@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Iterator, Optional, Union
+from typing import Iterable, Optional, Union
 
 import torch
 
@@ -9,7 +9,7 @@ __all__ = [
     'autocorrelation', 'autocovariance', 'partial_autocorrelation'
 ]
 
-Ints = Union[int, Iterator[int]]
+Ints = Union[int, Iterable[int]]
 
 
 def autocorrelation(series: torch.Tensor, n_lags: Optional[int] = None,
@@ -23,6 +23,8 @@ def autocorrelation(series: torch.Tensor, n_lags: Optional[int] = None,
     .. math::
 
         \\mbox{Autocorr}(x)_k = \\mbox{Autocov}(x)_k / \\mbox{Var}(x)
+
+        \\mbox{Autocov}(x)_k = \\mathbb{E}(x_tx_{t + k}) - (\\mathbb{E}x)^2
 
     For a multivariate series, this returns only the autocorrelations of each
     channel to itself. The autocorrelation is returned as a 2-dimensional

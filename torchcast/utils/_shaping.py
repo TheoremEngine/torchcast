@@ -74,13 +74,37 @@ def _ensure_nct(series: torch.Tensor, time_dim: int = -1,
 def _sliding_window_view(x: torch.Tensor, window_size: int, dim: int = -1) \
         -> torch.Tensor:
     '''
-    Given an input tensor, uses stride tricks to create a tensor
+    Given an input tensor, uses stride tricks to create a tensor where there is
+    a new dimension that acts as a sliding window along when of the original
+    dimensions. For example:
+
+    .. code::
+        >>> x = torch.arange(9).view(3, 3)
+        >>> print(x)
+        tensor([[0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8]])
+        >>> x = tc.utils._shaping._sliding_window_view(x, 2, dim=0)
+        >>> print(x.shape)
+        torch.Size([2, 2, 3])
+        >>> print(x[0])
+        tensor([[0, 1, 2],
+                [3, 4, 5]])
+        >>> print(x[1])
+        tensor([[3, 4, 5],
+                [6, 7, 8]])
+
+    Args:
+        x (:class:`torch.Tensor`): Tensor to cut into sliding windows.
+        window_size (int): Width of window.
+        dim (int): Dimension to form windows on.
     '''
     if (x.ndim < dim) or (x.shape[dim] < window_size):
         raise ValueError(
             f'Tensor shape {x.shape} does not support window of size '
             f'{window_size} on dimension {dim}'
         )
+    dim = (x.ndim + dim) if (dim < 0) else dim
 
     shape = (
         *x.shape[:dim], x.shape[dim] + 1 - window_size, window_size,

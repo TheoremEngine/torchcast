@@ -1,3 +1,5 @@
+from itertools import product
+from math import pi
 import unittest
 
 import numpy as np
@@ -224,6 +226,86 @@ class ShapingTests(unittest.TestCase):
         self.assertEqual(win2_x.shape, (5, 2, 2, 2, 3))
         self.assertTrue((win2_x[:, :, 0, :, :] == win_x[:, :, 0:2, :]).all())
         self.assertTrue((win2_x[:, :, 1, :, :] == win_x[:, :, 1:3, :]).all())
+
+        win_x = tc.utils._shaping._sliding_window_view(x, 2, -1)
+
+        self.assertEqual(win_x.shape, (5, 4, 2, 2))
+        self.assertTrue((win_x[:, :, 0, :] == x[:, :, 0:2]).all())
+        self.assertTrue((win_x[:, :, 1, :] == x[:, :, 1:3]).all())
+
+
+class SpectralTests(unittest.TestCase):
+    def test_cross_spectral_density(self):
+        torch.manual_seed(0)
+
+        for n in [1023, 1024]:
+            x = torch.linspace(0, 16 * pi, n).cos() + (0.1 * torch.randn(n))
+            y = torch.linspace(0, 16 * pi, n).sin() + (0.1 * torch.randn(n))
+
+            tc_freqs, tc_pxy = tc.utils.cross_spectral_density(
+                x, y, window_length=n,
+            )
+            tc_pxy = tc_pxy.flatten()
+            sp_freqs, sp_pxy = scipy.signal.csd(
+                x.numpy(), y.numpy(), window='boxcar', noverlap=0,
+                detrend=False, nperseg=n, nfft=n,
+            )
+
+            self.assertEqual(tc_freqs.shape, sp_freqs.shape)
+            self.assertTrue(np.isclose(tc_freqs.numpy(), sp_freqs).all())
+            self.assertEqual(tc_pxy.shape, sp_pxy.shape)
+            self.assertTrue((np.abs(tc_pxy.numpy() - sp_pxy) < 1e-4).all())
+
+            x = x + (0.1j * torch.randn(n))
+            y = y + (0.1j * torch.randn(n))
+
+            tc_freqs, tc_pxy = tc.utils.cross_spectral_density(
+                x, y, window_length=n,
+            )
+            tc_pxy = tc_pxy.flatten()
+            sp_freqs, sp_pxy = scipy.signal.csd(
+                x.numpy(), y.numpy(), window='boxcar', noverlap=0,
+                detrend=False, nperseg=n, nfft=n, return_onesided=False,
+            )
+
+            self.assertEqual(tc_freqs.shape, sp_freqs.shape)
+            self.assertTrue(np.isclose(tc_freqs.numpy(), sp_freqs).all())
+            self.assertEqual(tc_pxy.shape, sp_pxy.shape)
+            self.assertTrue((np.abs(tc_pxy.numpy() - sp_pxy) < 1e-4).all())
+
+    def test_power_spectral_density(self):
+        torch.manual_seed(0)
+
+        for n in [1023, 1024]:
+            x = torch.linspace(0, 16 * pi, n).cos() + (0.1 * torch.randn(n))
+
+            tc_freqs, tc_pxx = tc.utils.power_spectral_density(
+                x, window_length=n,
+            )
+            tc_pxx = tc_pxx.flatten()
+            sp_freqs, sp_pxx = scipy.signal.periodogram(
+                x.numpy(), detrend=False
+            )
+
+            self.assertEqual(tc_freqs.shape, sp_freqs.shape)
+            self.assertTrue(np.isclose(tc_freqs.numpy(), sp_freqs).all())
+            self.assertEqual(tc_pxx.shape, sp_pxx.shape)
+            self.assertTrue((np.abs(tc_pxx.numpy() - sp_pxx) < 1e-4).all())
+
+            x = x + (0.1j * torch.randn(n))
+
+            tc_freqs, tc_pxx = tc.utils.power_spectral_density(
+                x, window_length=n,
+            )
+            tc_pxx = tc_pxx.flatten()
+            sp_freqs, sp_pxx = scipy.signal.periodogram(
+                x.numpy(), detrend=False, return_onesided=False,
+            )
+
+            self.assertEqual(tc_freqs.shape, sp_freqs.shape)
+            self.assertTrue(np.isclose(tc_freqs.numpy(), sp_freqs).all())
+            self.assertEqual(tc_pxx.shape, sp_pxx.shape)
+            self.assertTrue((np.abs(tc_pxx.numpy() - sp_pxx) < 1e-4).all())
 
 
 if __name__ == '__main__':
