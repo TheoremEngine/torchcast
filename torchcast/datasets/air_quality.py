@@ -15,7 +15,8 @@ AIR_QUALITY_FILE_NAME = 'AirQualityUCI.csv'
 
 class AirQualityDataset(TensorSeriesDataset):
     '''
-    This is the De Vito et al. air quality dataset.
+    This is the `De Vito et al. 2008
+    <https://doi.org/10.1016/J.SNB.2007.09.060>`__ air quality dataset.
     '''
     def __init__(self, path: Optional[str] = None,
                  download: Union[bool, str] = True,

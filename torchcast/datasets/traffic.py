@@ -17,11 +17,10 @@ TRAFFIC_FILE_NAME = 'traffic_hourly_dataset.tsf'
 
 class SanFranciscoTrafficDataset(TensorSeriesDataset):
     '''
-    San Francisco traffic dataset, taken from:
+    This is the San Francisco traffic dataset from `Lai et al. 2017
+    <https://arxiv.org/abs/1703.07015>`, obtained from:
 
         https://pems.dot.ca.gov
-
-        https://arxiv.org/abs/1703.07015
     '''
     def __init__(self, path: Optional[str] = None, split: str = 'all',
                  download: Union[str, bool] = True, scale: bool = True,

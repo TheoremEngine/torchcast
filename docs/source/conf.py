@@ -47,7 +47,7 @@ try:
     html_theme_options = {}
     html_theme_options.update(branding.sphinx.SPHINX_THEME_OPTIONS)
 
-    pygments_style = 'viridian'
+    pygments_style = 'branding.style.Viridian'
 
 except ImportError:
     print('branding not found. Building with alabaster defaults.')

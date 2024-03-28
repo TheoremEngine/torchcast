@@ -16,11 +16,10 @@ EXCHANGE_RATE_FILE_NAME = 'exchange_rate.txt'
 
 class ExchangeRateDataset(TensorSeriesDataset):
     '''
-    This is a record of currency exchange rates, taken from:
+    This is the `Lai et al. 2017 <https://arxiv.org/abs/1703.07015>`__ dataset
+    of currency exchange rates, taken from:
 
         https://github.com/laiguokun/multivariate-time-series-data
-
-        https://arxiv.org/abs/1703.07015
     '''
     def __init__(self, path: Optional[str] = None, split: str = 'all',
                  download: Union[bool, str] = True, scale: bool = True,

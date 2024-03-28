@@ -17,7 +17,8 @@ def continuous_ranked_probability_score(true_values: torch.Tensor,
         \\mbox{CRPS}(F, y) = \\mathbb{E}|X_1 - y|
         - \\frac{1}{2}\\mathbb{E}|X_1 - X_2|
 
-    Where $X_1, X_2$ are independent samples from the distribution of $F$.
+    Where :math:`X_1, X_2` are independent samples from the distribution of
+    :math:`F`.
 
     For further details, see:
 

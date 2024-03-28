@@ -38,7 +38,8 @@ DATA_SPLITS = {
 
 class ElectricityTransformerDataset(TensorSeriesDataset):
     '''
-    This is the Zhou et al. electricity transformer dataset, obtained from:
+    This is the `Zhou et al. 2021 <https://arxiv.org/abs/2012.07436>`__
+    electricity transformer dataset, obtained from:
 
         https://github.com/zhouhaoyi/ETDataset
 

@@ -100,12 +100,9 @@ MULTIVARIATE_SERIES_NAMES = {
 
 class MonashArchiveDataset(TensorSeriesDataset):
     '''
-    This provides access to all Monash forecasting archive datasets:
-
-        https://forecastingdata.org
-
-        Godahewa et al., 2021. "Monash Time Series Forecasting Archive." Neural
-        Information Processing Systems 2021.
+    This provides access to all `Monash forecasting archive
+    <https://forecastingdata.org>`__ datasets, as discussed in `Godahewa et al.
+    2021 <https://arxiv.org/abs/2105.06643>`__.
     '''
     def __init__(self, task: str, split: str = 'train',
                  path: Optional[str] = None,

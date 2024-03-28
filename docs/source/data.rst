@@ -1,4 +1,4 @@
-Data Submodule
+data Submodule
 ==============
 
 This submodule contains tools for working with time series datasets. For clarity, we need some definitions:

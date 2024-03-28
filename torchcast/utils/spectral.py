@@ -16,6 +16,21 @@ def cross_spectral_density(x: torch.Tensor, y: torch.Tensor,
                            batch_dim: Optional[Ints] = None) \
         -> Tuple[torch.Tensor, torch.Tensor]:
     '''
+    Calculates the `cross spectral density
+    <https://en.wikipedia.org/wiki/Spectral_density#Cross-Spectral_Density>`__
+    for two series:
+
+    .. math::
+        P_{xy}(f) = \\mathcal{F}(R_{xy})(f)
+
+    Where :math:`\\mathcal{F}` denotes the Fourier transform and :math:`R_{xy}`
+    is the cross-correlation. The calculation uses the Welch method from:
+
+        Welch, 1967. "The use of Fast Fourier Transform for the Estimation of
+        Power Spectra: A Method Based on Time Averaging over Short, Modified
+        Periodograms." *IEEE Transactions on Audio and Electroacoustic*, Vol.
+        AU-15, No. 2, pp. 70-73.
+
     Args:
         x (:class:`torch.Tensor`): First tensor to calculate the cross spectral
             density of.
@@ -72,13 +87,19 @@ def power_spectral_density(x: torch.Tensor, sampling_frequency: float = 1.0,
                            batch_dim: Optional[Ints] = None) \
         -> Tuple[torch.Tensor, torch.Tensor]:
     '''
-    Estimates the power spectral density, also called the periodogram.
+    Calculates the `power spectral density
+    <https://en.wikipedia.org/wiki/Spectral_density>`__ for a series, also
+    called the periodogram:
 
-    The calculation uses the Welch method from:
+    .. math::
+        P_{xx}(f) = \\left| \\mathcal{F}(x)(f) \\right|^2
 
-        Welch, 1967. ``The use of Fast Fourier Transform for the Estimation of
+    Where :math:`\\mathcal{F}` denotes the Fourier transformer. The calculation
+    uses the Welch method from:
+
+        Welch, 1967. "The use of Fast Fourier Transform for the Estimation of
         Power Spectra: A Method Based on Time Averaging over Short, Modified
-        Periodograms.'' *IEEE Transactions on Audio and Electroacoustic*, Vol.
+        Periodograms." *IEEE Transactions on Audio and Electroacoustic*, Vol.
         AU-15, No. 2, pp. 70-73.
 
     Args:

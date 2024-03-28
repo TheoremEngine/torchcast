@@ -17,14 +17,19 @@ def autocorrelation(series: torch.Tensor, n_lags: Optional[int] = None,
                     batch_dim: Optional[Ints] = None,
                     use_fft: Optional[bool] = None) -> torch.Tensor:
     '''
-    Calculates the autocorrelation of a series. The autocorrelation is the
-    ratio of the autocovariance to the variance:
+    Calculates the `autocorrelation
+    <https://en.wikipedia.org/wiki/Autocorrelation>`__ of a series. The
+    autocorrelation is the ratio of the autocovariance to the variance:
 
     .. math::
 
         \\mbox{Autocorr}(x)_k = \\mbox{Autocov}(x)_k / \\mbox{Var}(x)
 
         \\mbox{Autocov}(x)_k = \\mathbb{E}(x_tx_{t + k}) - (\\mathbb{E}x)^2
+
+    Where the expectation is taken over time. This function can calculate the
+    autocorrelation using either the brute-force method or the `Wiener-Khinchin
+    method <https://en.wikipedia.org/wiki/Wiener-Khinchin_theorem>`__.
 
     For a multivariate series, this returns only the autocorrelations of each
     channel to itself. The autocorrelation is returned as a 2-dimensional
@@ -65,14 +70,17 @@ def autocovariance(series: torch.Tensor, n_lags: Optional[int] = None,
                    batch_dim: Optional[Ints] = None,
                    use_fft: Optional[bool] = None) -> torch.Tensor:
     '''
-    Calculates the autocovariance of a series:
+    Calculates the `autocovariance
+    <https://en.wikipedia.org/wiki/Autocovariance>`__ of a series:
 
     .. math::
 
         \\mbox{Autocov}(x)_k = \\mathbb{E}(x_tx_{t + k}) - (\\mathbb{E}x)^2
 
     Where the expectation is taken over time. Note that the 0th autocovariance
-    is equal to the variance of the series.
+    is equal to the variance of the series. This function can calculate the
+    autocorrelation using either the brute-force method or the `Wiener-Khinchin
+    method <https://en.wikipedia.org/wiki/Wiener-Khinchin_theorem>`__.
 
     For a multivariate series, this returns only the autocovariances of each
     channel to itself; to get the full matrix use the cross-covariance
@@ -185,8 +193,12 @@ def partial_autocorrelation(series: torch.Tensor, n_lags: Optional[int] = None,
                             batch_dim: Optional[Ints] = None,
                             use_fft: Optional[bool] = None) -> torch.Tensor:
     '''
-    Calculates the partial autocorrelation of a series, using the recursive
-    Yule-Walker method.
+    Calculates the `partial autocorrelation
+    <https://en.wikipedia.org/wiki/Partial_autocorrelation_function>`__ of a
+    series, using the recursive Yule-Walker method. See:
+
+        Box, Jenkins, et al. *Time Series Analysis.* John Wiley and Sons, 2016.
+        pp. 84-86.
 
     This currently returns only the autocorrelations of each channel to itself,
     it does not support returning the full matrix. The autocorrelation is
@@ -210,10 +222,6 @@ def partial_autocorrelation(series: torch.Tensor, n_lags: Optional[int] = None,
             time series, and slower for shorter ones. If not set, then we infer
             from the size of the data.
     '''
-    # We apply the Yule-Walker method, see p. 84 of Box, Jenkins, et al, "Time
-    # Series Analysis", 5th edition. Specifically, equations A3.2.7 and A3.2.8
-    # on p. 86.
-
     # Coerce to NCT arrangement.
     n_lags = n_lags or (series.shape[dim] - 1)
     series, _ = _ensure_nct(series, dim, batch_dim)

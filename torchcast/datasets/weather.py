@@ -25,11 +25,9 @@ class GermanWeatherDataset(TensorSeriesDataset):
 
         https://www.bgc-jena.mpg.de/wetter/weather_data.html
 
-    This is provided because it was used in the paper:
-
-        https://arxiv.org/abs/2205.13504
-
-    Which used only the data from Beutenberg in 2020.
+    This dataset was first used in time series forecasting in `Zeng et al. 2022
+    <https://arxiv.org/abs/2205.13504>`__, which used only the data from
+    Beutenberg in 2020.
     '''
     def __init__(self, path: Optional[str] = None,
                  year: Union[int, Iterable[int]] = 2020,
