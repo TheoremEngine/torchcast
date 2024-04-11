@@ -64,7 +64,7 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
         t = pd.date_range(
             datetime(2015, 1, 1),
             datetime(2015, 1, 1) + timedelta(hours=(data.shape[2] - 1)),
-            freq='H',
+            freq='h',
         )
         t = torch.from_numpy(t.astype(np.int64).values).view(1, 1, -1)
 

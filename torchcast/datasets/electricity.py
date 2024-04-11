@@ -69,7 +69,7 @@ class ElectricityLoadDataset(TensorSeriesDataset):
         # https://github.com/laiguokun/multivariate-time-series-data
         # The data is taken hourly, starting at 2012-01-01.
         t = pd.date_range(
-            datetime(2012, 1, 1), datetime(2014, 12, 31, 23, 59, 59), freq='H'
+            datetime(2012, 1, 1), datetime(2014, 12, 31, 23, 59, 59), freq='h'
         )
         t = torch.from_numpy(t.astype(np.int64).values).view(1, 1, -1)
 
