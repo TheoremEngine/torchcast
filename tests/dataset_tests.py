@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from math import isclose, isnan
 import os
 import tempfile
@@ -123,6 +123,66 @@ class MonashTests(unittest.TestCase):
             self.assertEqual(t.shape, (2,))
             self.assertEqual(t.dtype, np.int64)
             self.assertEqual(t[1], pd.Timestamp(end).value)
+
+
+class TFBTests(unittest.TestCase):
+    def test_multivariate(self):
+        ds = tc.datasets.TFBDataset('Wind')
+
+        self.assertEqual(len(ds.data), 2)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 48673))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[0][0, 0, 0], pd.Timestamp(2020, 1, 1).value)
+        self.assertEqual(ds.data[0][0, 0, -1], pd.Timestamp(2021, 5, 22).value)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, None)
+
+        self.assertEqual(ds.data[1].shape, (1, 7, 48673))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        self.assertEqual(ds.metadata[1].name, None)
+        self.assertEqual(
+            set(ds.metadata[1].channel_names),
+            {'pred_w_speed', 'pred_w_dir', 'pred_temp', 'pred_pressure',
+             'pred_humidity', 'ture_w_speed', 'target'}
+        )
+        self.assertEqual(ds.metadata[1].series_names, None)
+
+    def test_multivariate_with_nonstandard_datetime(self):
+        ds = tc.datasets.TFBDataset('Solar')
+
+        self.assertEqual(len(ds.data), 2)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 52560))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[0][0, 0, 0], pd.Timestamp(2006, 1, 1).value)
+        self.assertEqual(
+            ds.data[0][0, 0, -1], pd.Timestamp(2006, 12, 31, 23, 50).value
+        )
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, None)
+
+        self.assertEqual(ds.data[1].shape, (1, 137, 52560))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        self.assertEqual(ds.metadata[1].name, None)
+        self.assertEqual(
+            set(ds.metadata[1].channel_names),
+            {f'channel_{c}' for c in range(1, 138)}
+        )
+        self.assertEqual(ds.metadata[1].series_names, None)
+
+    def test_univariate(self):
+        ds = tc.datasets.TFBDataset('human_1')
+
+        self.assertEqual(len(ds.data), 1)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 169))
+        self.assertEqual(ds.data[0].dtype, torch.float32)
+        self.assertEqual(ds.metadata[0].name, None)
+        self.assertEqual(ds.metadata[0].channel_names[0], 'channel_1')
+        self.assertEqual(ds.metadata[0].series_names, None)
 
 
 class UCRTests(unittest.TestCase):

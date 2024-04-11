@@ -5,7 +5,7 @@ import lzma
 import os
 import re
 import tarfile
-from typing import Callable, List, Optional, Union
+from typing import Optional, Union
 import zipfile
 
 import pandas as pd
@@ -17,7 +17,7 @@ from ._file_readers import load_ts_file, load_tsf_file
 __all__ = ['load_ts_file', 'load_tsf_file']
 
 
-_GOOGLE_URL = 'https://drive.google.com/uc?id={doc_id}'
+_GOOGLE_URL = 'https://drive.google.com/uc?export=download'
 
 
 def _add_missing_values(df: pd.DataFrame, **variables) -> pd.DataFrame:
@@ -39,7 +39,6 @@ def _add_missing_values(df: pd.DataFrame, **variables) -> pd.DataFrame:
 
 def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
                           download: Union[bool, str] = True,
-                          fetcher: Optional[Callable] = None,
                           encoding: str = 'utf-8') -> StringIO:
     '''
     Convenience function to wrangle fetching a remote file. This will return
@@ -49,29 +48,36 @@ def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
     Args:
         url (str): The URL to download the data from.
         file_name (str): Name of the file. This should be the desired file, not
-        the name of the zipped file, if the file is compressed.
+            the name of the zipped file, if the file is compressed. If the file
+            has a relative path inside an archive file, this name should
+            include that path.
         local_path (optional, str): The local path to find the file, and put
-        the extracted data in if it needs to be fetched.
+            the extracted data in if it needs to be fetched.
         download (bool or str): Whether to download the file if it is not
-        present. Can be true, false, or 'force', in which case the file will be
-        redownloaded even if it is present locally.
+            present. Can be true, false, or 'force', in which case the file
+            will be redownloaded even if it is present locally.
         encoding (str): Encoding of bytes object.
     '''
+    # The name of the file we're fetching may be different from the name of the
+    # file we want, e.g. if it's zipped.
+    fetched_name = os.path.basename(url)
+
     if local_path is not None:
         # First, infer whether local_path is a directory or the path of the
         # file. Make sure target location exists.
-        if os.path.basename(local_path) == file_name:
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-        elif os.path.isdir(local_path):
-            local_path = os.path.join(local_path, file_name)
-        elif not os.path.exists(local_path):
-            os.makedirs(local_path, exist_ok=True)
-            local_path = os.path.join(local_path, file_name)
+        if os.path.basename(local_path) in {file_name, fetched_name}:
+            local_path = os.path.dirname(local_path)
+        os.makedirs(local_path, exist_ok=True)
+        fetched_path = os.path.join(local_path, fetched_name)
+        file_path = os.path.join(local_path, os.path.basename(file_name))
 
         # If file is already present, open it and return.
-        if os.path.exists(local_path):
-            with open(local_path, 'r') as f:
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
                 return StringIO(f.read())
+        elif os.path.exists(fetched_path):
+            with open(fetched_path, 'rb') as f:
+                buff = BytesIO(f.read())
         elif not download:
             raise FileNotFoundError(local_path)
 
@@ -80,15 +86,104 @@ def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
         # do?
         raise ValueError('If download is false, local_path must be provided')
 
-    # If we reach here, the file is not available locally. So let's get that
-    # file!
-    if fetcher is None:
-        fetcher = _cached_fetch_from_remote
-    buff = BytesIO(fetcher(url))
+    # We break this out as a separate function so we can wrap it in an
+    # lru_cache.
+    buff = _fetch_from_remote(url)
 
+    # If local_path is provided, write to disk
+    if (local_path is not None) and (not os.path.exists(fetched_path)):
+        with open(fetched_path, 'wb') as out_file:
+            out_file.write(buff.read())
+        buff.seek(0)
+
+    buff = _extract_file_from_buffer(buff, fetched_name, file_name)
+
+    # Convert from bytes to string
+    return StringIO(buff.read().decode(encoding))
+
+
+def _download_from_google_drive_and_extract(doc_id: str, file_name: str,
+                                            remote_name: str,
+                                            local_path: Optional[str],
+                                            download: Union[bool, str] = True,
+                                            encoding: str = 'utf-8') \
+        -> StringIO:
+    '''
+    Convenience function to wrangle fetching a remote file from Google drive.
+    This will return the file as a :class:`io.StringIO` object, fetching it if
+    necessary. This function is designed to work with files small enough to be
+    held in memory.
+
+    Args:
+        doc_id (str): The document ID on Google drive.
+        file_name (str): Name of the file. This should be the desired file, not
+            the name of the zipped file, if the file is compressed. If the file
+            has a relative path inside an archive file, this name should
+            include that path.
+        remote_name (str): Name of the file we're fetching. This may not be
+            the same as the file_name, e.g. if we're fetching a zip archive.
+        local_path (optional, str): The local path to find the file, and put
+            the extracted data in if it needs to be fetched.
+        download (bool or str): Whether to download the file if it is not
+            present. Can be true, false, or 'force', in which case the file
+            will be redownloaded even if it is present locally.
+        encoding (str): Encoding of bytes object.
+    '''
+    if local_path is not None:
+        # First, infer whether local_path is a directory or the path of the
+        # file. Make sure target location exists.
+        if os.path.basename(local_path) in {file_name, remote_name}:
+            local_path = os.path.dirname(local_path)
+        os.makedirs(local_path, exist_ok=True)
+        fetched_path = os.path.join(local_path, remote_name)
+        file_path = os.path.join(local_path, os.path.basename(file_name))
+
+        # If file is already present, open it and return.
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                return StringIO(f.read())
+        elif os.path.exists(fetched_path):
+            with open(fetched_path, 'rb') as f:
+                buff = BytesIO(f.read())
+        elif not download:
+            raise FileNotFoundError(local_path)
+
+    elif not download:
+        # If download == False, but no local_path is provided, what are we to
+        # do?
+        raise ValueError('If download is false, local_path must be provided')
+
+    # We break this out as a separate function so we can wrap it in an
+    # lru_cache.
+    buff = _fetch_from_google(doc_id)
+
+    # If local_path is provided, write to disk
+    if (local_path is not None) and (not os.path.exists(fetched_path)):
+        with open(fetched_path, 'wb') as out_file:
+            out_file.write(buff.read())
+        buff.seek(0)
+
+    buff = _extract_file_from_buffer(buff, remote_name, file_name)
+
+    # Convert from bytes to string
+    return StringIO(buff.read().decode(encoding))
+
+
+def _extract_file_from_buffer(buff: BytesIO, buff_name: str,
+                              file_name: str) -> BytesIO:
+    '''
+    Extracts a desired file from an arbitrary buffer. The buffer might be the
+    file we want, or it might be some archive format.
+
+    Args:
+        buff (:class:`BytesIO`): The buffer to extract the file from.
+        buff_name (str): Name of the buffer. We use this to infer whether it's
+            an archive and how to open it up.
+        file_name (str): Name of the file we want.
+    '''
     # Extract, if needed.
     while True:
-        url, ext = os.path.splitext(url.lower())
+        buff_name, ext = os.path.splitext(buff_name.lower())
 
         if ext == '.gz':
             buff = BytesIO(gzip.decompress(buff.read()))
@@ -102,44 +197,38 @@ def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
         elif ext == '.zip':
             with zipfile.ZipFile(buff) as zip_file:
                 buff = BytesIO(zip_file.read(file_name))
-
-        break
-
-    # Convert from bytes to string
-    buff.seek(0)
-    buff = StringIO(buff.read().decode(encoding))
-
-    # If local_path is provided, write to disk
-    if local_path is not None:
-        with open(local_path, 'w') as out_file:
-            out_file.write(buff.read())
-        buff.seek(0)
+        else:
+            break
 
     return buff
 
 
-def _fetch_from_google_drive(doc_id: str) -> BytesIO:
+@lru_cache
+def _fetch_from_google(doc_id: str) -> BytesIO:
     '''
-    Downloads a file from Google drive and returns as an in-memory buffer.
+    Retrieves a file from a URL and downloads it, returning it as an in-memory
+    buffer. We break this out as a separate function so we can wrap it in
+    :func:`lru_cache`.
 
     Args:
-        doc_id (str): Identifier for the file on Google drive.
+        doc_id (str): Document ID of the file to retrieve.
     '''
-    # Check if it's already downloaded.
-    url = _GOOGLE_URL.format(doc_id=doc_id)
+    url, params = _GOOGLE_URL, {'id': doc_id}
     session = requests.session()
 
     # Based on gdown package implementation
     while True:
-        r = session.get(url, stream=True, verify=True)
+        r = session.get(url, params=params, stream=True, verify=True)
         r.raise_for_status()
 
         if 'Content-Disposition' in r.headers:
             break
 
-        _, response = r.text.splitlines()
-        search = re.search('id="downloadForm" action="(.+?)"', response)
+        search = re.search('id="download-form" action="(.+?)"', r.text)
         url = search.groups()[0].replace('&amp;', '&')
+        params = dict(re.findall(
+            '<input type="hidden" name="(.+?)" value="(.+?)">', r.text
+        ))
         r.close()
 
     buff = BytesIO()
@@ -153,10 +242,12 @@ def _fetch_from_google_drive(doc_id: str) -> BytesIO:
     return buff
 
 
-def _fetch_from_remote(url: str) -> bytes:
+@lru_cache
+def _fetch_from_remote(url: str) -> BytesIO:
     '''
     Retrieves a file from a URL and downloads it, returning it as an in-memory
-    buffer.
+    buffer. We break this out as a separate function so we can wrap it in
+    :func:`lru_cache`.
 
     Args:
         url (str): URL to download.
@@ -173,10 +264,7 @@ def _fetch_from_remote(url: str) -> bytes:
 
     buff.seek(0)
 
-    return buff.read()
-
-
-_cached_fetch_from_remote = lru_cache(_fetch_from_remote)
+    return buff
 
 
 def _split_7_1_2(split: str, input_length: Optional[int],

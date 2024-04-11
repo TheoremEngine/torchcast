@@ -41,6 +41,7 @@ if __name__ == '__main__':
         author='Mark Lowell',
         author_email='MarkLowell@theorem-engine.org',
         packages=find_packages(),
+        package_data={'torchcast': ['datasets/*.txt']},
         install_requires=requirements,
         ext_modules=ext_modules,
     )
