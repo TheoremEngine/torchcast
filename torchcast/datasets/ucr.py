@@ -68,6 +68,8 @@ class UCRDataset(TensorSeriesDataset):
         https://www.timeseriesclassification.com/
 
     '''
+    tasks: List[str] = list(UCR_DATASETS.keys())
+
     def __init__(self, task: str, split: str = 'train',
                  path: Optional[str] = None,
                  download: Union[bool, str] = True,
@@ -121,6 +123,8 @@ class UEADataset(TensorSeriesDataset):
         https://www.timeseriesclassification.com/
 
     '''
+    tasks: List[str] = list(UEA_DATASETS.keys())
+
     def __init__(self, task: str, split: str = 'train',
                  path: Optional[str] = None,
                  download: Union[bool, str] = True,

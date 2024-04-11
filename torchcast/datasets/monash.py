@@ -104,6 +104,8 @@ class MonashArchiveDataset(TensorSeriesDataset):
     <https://forecastingdata.org>`__ datasets, as discussed in `Godahewa et al.
     2021 <https://arxiv.org/abs/2105.06643>`__.
     '''
+    tasks: List[str] = list(MONASH_ARCHIVE_URLS.keys())
+
     def __init__(self, task: str, split: str = 'train',
                  path: Optional[str] = None,
                  download: Union[str, bool] = True,
