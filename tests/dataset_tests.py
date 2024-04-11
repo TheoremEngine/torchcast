@@ -287,6 +287,13 @@ class UtilsTests(unittest.TestCase):
                 temp_root,
                 download=False
             )
+        # Now do it again, to make sure that the caching isn't messed up.
+        tc.datasets.utils._download_and_extract(
+            tc.datasets.air_quality.AIR_QUALITY_URL,
+            tc.datasets.air_quality.AIR_QUALITY_FILE_NAME,
+            None,
+            download=True
+        )
 
     def test_add_missing_values(self):
         df = pd.DataFrame({'a': [0, 3], 'b': [4, 5], 'c': [0, 0]})

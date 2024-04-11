@@ -89,6 +89,12 @@ def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
     # We break this out as a separate function so we can wrap it in an
     # lru_cache.
     buff = _fetch_from_remote(url)
+    # Need to include buff.seek, because _fetch_from_remote is lru_cached, and
+    # it returns a BytesIO. When first returned, it will be at index 0, but
+    # when it's processed below, it won't be rewound. Then, if it's fetched
+    # again, it will error out because the index is at the end and it looks
+    # empty.
+    buff.seek(0)
 
     # If local_path is provided, write to disk
     if (local_path is not None) and (not os.path.exists(fetched_path)):
@@ -156,6 +162,12 @@ def _download_from_google_drive_and_extract(doc_id: str, file_name: str,
     # We break this out as a separate function so we can wrap it in an
     # lru_cache.
     buff = _fetch_from_google(doc_id)
+    # Need to include buff.seek, because _fetch_from_google is lru_cached, and
+    # it returns a BytesIO. When first returned, it will be at index 0, but
+    # when it's processed below, it won't be rewound. Then, if it's fetched
+    # again, it will error out because the index is at the end and it looks
+    # empty.
+    buff.seek(0)
 
     # If local_path is provided, write to disk
     if (local_path is not None) and (not os.path.exists(fetched_path)):
