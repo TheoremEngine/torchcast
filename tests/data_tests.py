@@ -309,6 +309,26 @@ class TensorSeriesTest(unittest.TestCase):
         self.assertEqual(ds_2.data[2].tensors[1].shape, (2, 1))
         self.assertTrue((ds_2.data[2].tensors[1] == data_3[1][:, 4:]).all())
 
+    def test_with_subset(self):
+        ds = tc.data.TensorSeriesDataset(
+            torch.ones(2, 5, 3), torch.zeros(2, 4, 1),
+            return_length=2
+        )
+
+        out_1, out_0 = ds[torch.tensor(1)]
+        self.assertTrue((out_1 == 1).all())
+        self.assertTrue((out_0 == 0).all())
+
+        out_1, out_0 = ds[torch.tensor([1])]
+        self.assertTrue((out_1 == 1).all())
+        self.assertTrue((out_0 == 0).all())
+
+        subset = torch.utils.data.Subset(ds, [0, 1])
+        self.assertEqual(len(subset), 2)
+        out_1, out_0 = ds[1]
+        self.assertTrue((out_1 == 1).all())
+        self.assertTrue((out_0 == 0).all())
+
 
 class H5SeriesTest(unittest.TestCase):
     @staticmethod

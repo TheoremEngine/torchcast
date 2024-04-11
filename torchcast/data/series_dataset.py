@@ -87,6 +87,11 @@ class SeriesDataset(torch.utils.data.Dataset):
         self.metadata = metadata
 
     def __getitem__(self, idx: int):
+        if isinstance(idx, torch.Tensor):
+            if idx.numel() == 1:
+                idx = idx.item()
+            else:
+                raise TypeError('Index must be a single integer value')
         if (not isinstance(idx, int)) or (idx < 0):
             raise IndexError(idx)
 
