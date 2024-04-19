@@ -249,6 +249,7 @@ def _fetch_from_google(doc_id: str) -> BytesIO:
         buff.write(chunk)
 
     r.close()
+    session.close()
     buff.seek(0)
 
     return buff
