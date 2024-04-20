@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _download_and_extract, _split_7_1_2
+from .utils import _download_and_extract, _split_ltsf
 
 __all__ = ['GermanWeatherDataset']
 
@@ -98,13 +98,13 @@ class GermanWeatherDataset(TensorSeriesDataset):
             data = data[0].reshape(1, *data[0].shape)
 
         if scale:
-            train_data = _split_7_1_2('train', input_margin, data)
+            train_data = _split_ltsf('train', input_margin, data)
             mean, std = train_data.mean((0, 2)), train_data.std((0, 2))
             data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
 
         data_meta = Metadata(name='Data', channel_names=channel_names)
 
-        dates, data = _split_7_1_2(split, input_margin, dates, data)
+        dates, data = _split_ltsf(split, input_margin, dates, data)
 
         if not columns_as_channels:
             data = data.permute(1, 0, 2)

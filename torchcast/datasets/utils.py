@@ -280,8 +280,8 @@ def _fetch_from_remote(url: str) -> BytesIO:
     return buff
 
 
-def _split_7_1_2(split: str, input_length: Optional[int],
-                 *tensors: torch.Tensor):
+def _split_ltsf(split: str, input_length: Optional[int],
+                *tensors: torch.Tensor):
     '''
     Replicates the train-val-test split used in Zeng et al. in most of their
     datasets. The first 70% will be allocated to the training set, the last 20%

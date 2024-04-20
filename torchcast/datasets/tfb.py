@@ -19,6 +19,14 @@ DATE_FORMATS = [
     '%Y-%m-%d %H:%M:%S-01:00'
 ]
 
+# Most tasks in TFB use a 7-1-2 split, but some use a 6-2-2 split. See
+# SPLIT_DICT in ts_benchmark.evaluation.strategy.rolling_forecast, or Table 5
+# in the paper.
+BIG_VAL_TASKS = {
+    'ETTh1', 'ETTh2', 'ETTm1', 'ETTm2', 'PEMS03', 'PEMS04', 'PEMS07', 'PEMS08',
+    'Solar', 'AQShunyi', 'AQWan',
+}
+
 
 class TFBDataset(TensorSeriesDataset):
     '''
@@ -27,15 +35,21 @@ class TFBDataset(TensorSeriesDataset):
     collection, obtained from:
 
         https://github.com/decisionintelligence/TFB
+
+    This collection includes the LTSF collection as a subset, but the data is
+    pre-processed and split in different ways.
     '''
     _tasks: Optional[List[str]] = None
 
-    def __init__(self, task: str, path: Optional[str] = None,
-                 download: bool = True, transform: Optional[Callable] = None,
+    def __init__(self, task: str, split: str = 'all',
+                 path: Optional[str] = None, download: bool = True,
+                 transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):
         '''
         Args:
             task (str): Which dataset to retrieve.
+            split (str): What split of the data to return. The splits are taken
+                from Qiu et al. Choices: 'all', 'train', 'val', 'test'.
             path (optional, str): Path to find the dataset at.
             download (bool or str): Whether to download the dataset if it is
                 not already available. Can be true, false, or 'force'.
@@ -99,6 +113,9 @@ class TFBDataset(TensorSeriesDataset):
             data = (t, data)
             meta = [Metadata(name='Datetime'), meta]
 
+        train_percent = 0.75 if (task in BIG_VAL_TASKS) else 0.875
+        data = _split_tfb(split, train_percent, *data)
+
         super().__init__(
             *data, return_length=return_length, transform=transform,
             metadata=meta,
@@ -111,3 +128,38 @@ class TFBDataset(TensorSeriesDataset):
             with open(path, 'r') as tasks_file:
                 self._tasks = [row[:-1] for row in tasks_file.readlines()]
         return self._tasks
+
+
+def _split_tfb(split: str, train_percent: float, *tensors: torch.Tensor):
+    '''
+    Replicates the train-val-test split used in Qiu et al. The split is either
+    7-1-2 or 6-2-2, depending on the dataset, with the choices shown in Table
+    5.
+
+    Args:
+        split (str): Split to return. Choices: 'all', 'train', 'val', 'test'.
+        train_percent (float): Percent of the non-test data used in training.
+    '''
+    ts = {x.shape[2] for x in tensors if x.shape[2] > 1}
+    if len(ts) > 1:
+        raise ValueError(f'Received conflicting time lengths: {ts}')
+
+    if split in {'train', 'val', 'test'}:
+        num_all = max(x.shape[2] for x in tensors)
+        num_test = num_all - int(0.8 * num_all)
+        num_train = int((num_all - num_test) * train_percent)
+        num_val = num_all - (num_train + num_test)
+        if split == 'train':
+            t_0, t_1 = 0, num_train
+        elif split == 'val':
+            t_0, t_1 = num_train, num_train + num_val
+        else:
+            t_0, t_1 = num_train + num_val, num_all
+        tensors = tuple(x[:, :, t_0:t_1] for x in tensors)
+        return tensors
+
+    elif split == 'all':
+        return tensors
+
+    else:
+        raise ValueError(split)

@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _download_and_extract, _split_7_1_2
+from .utils import _download_and_extract, _split_ltsf
 
 __all__ = ['ExchangeRateDataset']
 
@@ -71,11 +71,11 @@ class ExchangeRateDataset(TensorSeriesDataset):
         t = torch.from_numpy(t.astype(np.int64).values).view(1, 1, -1)
 
         if scale:
-            train_data = _split_7_1_2('train', input_margin, data)
+            train_data = _split_ltsf('train', input_margin, data)
             mean, std = train_data.mean((0, 2)), train_data.std((0, 2))
             data = (data - mean.reshape(1, -1, 1)) / std.reshape(1, -1, 1)
 
-        data, t = _split_7_1_2(split, input_margin, data, t)
+        data, t = _split_ltsf(split, input_margin, data, t)
 
         if not columns_as_channels:
             data = data.permute(1, 0, 2)
