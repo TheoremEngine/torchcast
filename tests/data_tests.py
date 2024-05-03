@@ -46,6 +46,23 @@ class SeriesTest(unittest.TestCase):
         self.assertEqual(ds._find_i_t(5), (2, 1))
         with self.assertRaises(IndexError):
             ds._find_i_t(6)
+        self.assertEqual(len(ds), 6)
+
+        # What if return_length is greater than a tensor's length?
+        ds = tc.data.SeriesDataset(return_length=4)
+        ds.data = [tc.data.ListOfTensors([
+            torch.empty((3, 6)),
+            torch.empty((3, 2)),
+            torch.empty((3, 5)),
+        ])]
+        self.assertEqual(ds._find_i_t(0), (0, 0))
+        self.assertEqual(ds._find_i_t(1), (0, 1))
+        self.assertEqual(ds._find_i_t(2), (0, 2))
+        self.assertEqual(ds._find_i_t(3), (2, 0))
+        self.assertEqual(ds._find_i_t(4), (2, 1))
+        with self.assertRaises(IndexError):
+            ds._find_i_t(5)
+        self.assertEqual(len(ds), 5)
 
     def test_time_ranges(self):
         ds = tc.data.SeriesDataset()

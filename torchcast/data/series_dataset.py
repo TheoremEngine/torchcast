@@ -120,7 +120,7 @@ class SeriesDataset(torch.utils.data.Dataset):
             return self.shape[0]
         else:
             return sum(
-                t_r + 1 - self.return_length
+                max(t_r + 1 - self.return_length, 0)
                 for t_r in self._time_ranges
             )
 
@@ -152,7 +152,7 @@ class SeriesDataset(torch.utils.data.Dataset):
         for i, max_t in enumerate(self._time_ranges):
             if t <= (max_t - self.return_length):
                 break
-            t -= (max_t - self.return_length) + 1
+            t -= max(max_t + 1 - self.return_length, 0)
         else:
             raise IndexError(idx)
         return i, t
