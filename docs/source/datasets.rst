@@ -39,3 +39,6 @@ Other Datasets
 
 .. autoclass:: torchcast.datasets.AirQualityDataset
 
+.. autoclass:: torchcast.datasets.LargeSTDataset
+
+.. autoclass:: torchcast.datasets.TFBDataset
