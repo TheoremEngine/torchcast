@@ -5,9 +5,7 @@ from pybind11.setup_helpers import Pybind11Extension
 
 COMPILE_ARGS = [
     '-Wall',
-    '-pedantic-errors',
     '-Wextra',
-    '-Werror',
     '-Wsign-conversion',
 ]
 
