@@ -1,7 +1,6 @@
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import h5py
-import numpy as np
 
 from .series_dataset import Metadata, SeriesDataset
 
@@ -30,8 +29,14 @@ class H5View:
         self.view = view
         self.h5_data = h5_data
 
-    def __array__(self) -> np.ndarray:
-        return self.h5_data.__getitem__(tuple(self.view))
+    @property
+    def __array_interface__(self) -> Dict:
+        # Defining this property allows torch.as_tensor and np.array to convert
+        # an H5View to that type, as if it were a np.ndarray. For
+        # documentation, see:
+        #
+        # https://numpy.org/doc/stable/reference/arrays.interface.html
+        return self.h5_data.__getitem__(tuple(self.view)).__array_interface__
 
     def __getitem__(self, idx) -> 'H5View':
         if not isinstance(idx, tuple):

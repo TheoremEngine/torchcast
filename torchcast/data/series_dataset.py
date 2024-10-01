@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple, Union
 
+import numpy as np
 import torch
 
 from .utils import ArrayLike
@@ -15,7 +16,7 @@ class Metadata:
     :class:`torchcast.data.SeriesDataset`, each multiseries will have a
     corresponding :class:`Metadata` object. All fields of :class:`Metadata` are
     optional. The fields that may be available are:
-    
+
      * name: Name of the series.
      * channel_names: A list of the names of each channel.
      * series_names: A list of the names of each series.
@@ -107,8 +108,9 @@ class SeriesDataset(torch.utils.data.Dataset):
                 else:
                     out.append(x[j, :, :])
 
-        # TODO: This syntax is awkward...
-        out = [torch.from_numpy(x.__array__()) for x in out]
+        # This converts the contents of out to tensors if they're not already.
+        # See _to_tensor below for documentation of why we do it this way.
+        out = [_to_tensor(x) for x in out]
 
         if self.transform is not None:
             out = self.transform(*out)
@@ -192,11 +194,38 @@ class SeriesDataset(torch.utils.data.Dataset):
 
         data_a, data_b = zip(*(_split_by_time(ms, t) for ms in self.data))
         ds_a = SeriesDataset(
-            *data_a, return_length=self.return_length, transform=self.transform,
-            metadata=self.metadata,
+            *data_a, return_length=self.return_length,
+            transform=self.transform, metadata=self.metadata,
         )
         ds_b = SeriesDataset(
-            *data_b, return_length=self.return_length, transform=self.transform,
-            metadata=self.metadata,
+            *data_b, return_length=self.return_length,
+            transform=self.transform, metadata=self.metadata,
         )
         return ds_a, ds_b
+
+
+def _to_tensor(x) -> torch.Tensor:
+    # This function is intended to convert a variety of array-like objects into
+    # PyTorch tensors. PyTorch does have several functions intended to do this
+    # kind of thing, including torch.tensor, torch.as_tensor, and
+    # torch.asarray. However, they are relatively restrictive in what they can
+    # convert, and in particular do not allow us to convert objects that
+    # support the __array_interface__ protocol:
+    #
+    # https://numpy.org/doc/stable/reference/arrays.interface.html
+    #
+    # They do allow us to convert objects that support the buffer protocol:
+    #
+    # https://docs.python.org/3/reference/datamodel.html#python-buffer-protocol
+    #
+    # But they are not able to get the shape from it, at least as of PyTorch
+    # 2.5.0. Therefore, when converting arbitrary objects, we go through
+    # np.array, which does support both protocols. However, we do not want to
+    # go through np.asarray if the object is *already* a torch.Tensor, because
+    # that will break certain operations like torch.vmap that use tensor-like
+    # objects to track control flow. So that's a very long-winded explanation
+    # for why we do the following very simple thing:
+    if isinstance(x, torch.Tensor):
+        return x
+    else:
+        return torch.from_numpy(np.array(x))
