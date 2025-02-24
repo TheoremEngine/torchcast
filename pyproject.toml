@@ -1,2 +1,22 @@
 [build-system]
 requires = ["setuptools", "wheel", "pybind11"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torchcast"
+version = "0.1"
+authors = [
+  { name="Mark Lowell", email="MarkLowell@theorem-engine.org" },
+]
+description = "A simple PyTorch library for time series analysis"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+]
+
+[project.urls]
+Homepage = "https://github.com/TheoremEngine/torchcast"
+Issues = "https://github.com/TheoremEngine/torchcast/issues"
+
