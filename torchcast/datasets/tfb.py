@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _download_from_google_drive_and_extract
+from .utils import _decode, _download_from_google_drive_and_extract
 
 __all__ = ['TFBDataset']
 
@@ -66,6 +66,8 @@ class TFBDataset(TensorSeriesDataset):
             GOOGLE_ID, file_name=f'forecasting/{task}.csv',
             remote_name='forecasting.zip', local_path=path,
         )
+        buff = _decode(buff)
+
         # When downloaded, the csv has three columns: 'date', 'data', and
         # 'cols'. For example, for a multivariate time series with variables
         # 'A' and 'B', there would be two rows for each date:

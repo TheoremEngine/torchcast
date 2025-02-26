@@ -5,7 +5,7 @@ import pandas as pd
 import torch
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _download_and_extract
+from .utils import _decode, _download_and_extract
 
 __all__ = ['AirQualityDataset']
 
@@ -39,6 +39,7 @@ class AirQualityDataset(TensorSeriesDataset):
             path,
             download=download,
         )
+        buff = _decode(buff)
 
         # This will return a dictionary mapping keys to lists
         df = pd.read_csv(buff, delimiter=';', decimal=',')

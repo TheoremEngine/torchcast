@@ -7,7 +7,7 @@ import torch
 
 from ..data import Metadata, TensorSeriesDataset
 from ._file_readers import parse_tsf
-from .utils import _download_and_extract, _split_ltsf
+from .utils import _decode, _download_and_extract, _split_ltsf
 
 __all__ = ['SanFranciscoTrafficDataset']
 
@@ -54,6 +54,7 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
             path,
             download=download,
         )
+        buff = _decode(buff)
 
         data, _ = parse_tsf(buff.read())
         data = torch.from_numpy(data).permute(1, 0, 2)

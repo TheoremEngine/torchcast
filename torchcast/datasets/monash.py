@@ -9,7 +9,7 @@ import torch
 
 from ..data import Metadata, TensorSeriesDataset
 from ._file_readers import parse_tsf
-from .utils import _download_and_extract
+from .utils import _decode, _download_and_extract
 
 __all__ = ['MonashArchiveDataset']
 
@@ -134,11 +134,11 @@ class MonashArchiveDataset(TensorSeriesDataset):
             os.path.basename(url).replace('zip', 'tsf'),
             path,
             download=download,
-            # For the encoding, see the convert_tsf_to_dataframe function in
-            # the utils/data_loader.py file in the repo:
-            # https://github.com/rakshitha123/TSForecasting
-            encoding='cp1252',
         )
+        # For the encoding, see the convert_tsf_to_dataframe function in the
+        # utils/data_loader.py file in the repo:
+        # https://github.com/rakshitha123/TSForecasting
+        buff = _decode(buff, encoding='cp1252')
 
         # data may be a np.ndarray OR a List[np.ndarray] at this stage,
         # depending on the header options in the tsf file.

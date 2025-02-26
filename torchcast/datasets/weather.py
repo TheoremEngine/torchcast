@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _download_and_extract, _split_ltsf
+from .utils import _decode, _download_and_extract, _split_ltsf
 
 __all__ = ['GermanWeatherDataset']
 
@@ -79,7 +79,7 @@ class GermanWeatherDataset(TensorSeriesDataset):
                 buff = _download_and_extract(
                     url, name, path, download=download, encoding='ISO-8859-1'
                 )
-                dfs.append(pd.read_csv(buff))
+                dfs.append(pd.read_csv(_decode(buff)))
 
             df = pd.concat(dfs)
             dates = pd.to_datetime(

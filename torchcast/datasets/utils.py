@@ -37,12 +37,15 @@ def _add_missing_values(df: pd.DataFrame, **variables) -> pd.DataFrame:
     return df.reset_index()
 
 
+def _decode(buff: BytesIO, encoding: str = 'utf-8') -> StringIO:
+    return StringIO(buff.read().decode(encoding))
+
+
 def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
-                          download: Union[bool, str] = True,
-                          encoding: str = 'utf-8') -> StringIO:
+                          download: Union[bool, str] = True) -> BytesIO:
     '''
     Convenience function to wrangle fetching a remote file. This will return
-    the file as a :class:`io.StringIO` object, fetching it if necessary. This
+    the file as a :class:`io.BytesIO` object, fetching it if necessary. This
     function is designed to work with files small enough to be held in memory.
 
     Args:
@@ -56,7 +59,6 @@ def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
         download (bool or str): Whether to download the file if it is not
             present. Can be true, false, or 'force', in which case the file
             will be redownloaded even if it is present locally.
-        encoding (str): Encoding of bytes object.
     '''
     # The name of the file we're fetching may be different from the name of the
     # file we want, e.g. if it's zipped.
@@ -73,8 +75,8 @@ def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
 
         # If file is already present, open it and return.
         if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
-                return StringIO(f.read())
+            with open(file_path, 'rb') as f:
+                return BytesIO(f.read())
         elif os.path.exists(fetched_path):
             with open(fetched_path, 'rb') as f:
                 buff = BytesIO(f.read())
@@ -102,18 +104,14 @@ def _download_and_extract(url: str, file_name: str, local_path: Optional[str],
             out_file.write(buff.read())
         buff.seek(0)
 
-    buff = _extract_file_from_buffer(buff, fetched_name, file_name)
-
-    # Convert from bytes to string
-    return StringIO(buff.read().decode(encoding))
+    return _extract_file_from_buffer(buff, fetched_name, file_name)
 
 
 def _download_from_google_drive_and_extract(doc_id: str, file_name: str,
                                             remote_name: str,
                                             local_path: Optional[str],
-                                            download: Union[bool, str] = True,
-                                            encoding: str = 'utf-8') \
-        -> StringIO:
+                                            download: Union[bool, str] = True)\
+        -> BytesIO:
     '''
     Convenience function to wrangle fetching a remote file from Google drive.
     This will return the file as a :class:`io.StringIO` object, fetching it if
@@ -133,7 +131,6 @@ def _download_from_google_drive_and_extract(doc_id: str, file_name: str,
         download (bool or str): Whether to download the file if it is not
             present. Can be true, false, or 'force', in which case the file
             will be redownloaded even if it is present locally.
-        encoding (str): Encoding of bytes object.
     '''
     if local_path is not None:
         # First, infer whether local_path is a directory or the path of the
@@ -147,7 +144,7 @@ def _download_from_google_drive_and_extract(doc_id: str, file_name: str,
         # If file is already present, open it and return.
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
-                return StringIO(f.read())
+                return BytesIO(f.read())
         elif os.path.exists(fetched_path):
             with open(fetched_path, 'rb') as f:
                 buff = BytesIO(f.read())
@@ -175,10 +172,7 @@ def _download_from_google_drive_and_extract(doc_id: str, file_name: str,
             out_file.write(buff.read())
         buff.seek(0)
 
-    buff = _extract_file_from_buffer(buff, remote_name, file_name)
-
-    # Convert from bytes to string
-    return StringIO(buff.read().decode(encoding))
+    return _extract_file_from_buffer(buff, remote_name, file_name)
 
 
 def _extract_file_from_buffer(buff: BytesIO, buff_name: str,

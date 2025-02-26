@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _download_and_extract, _split_ltsf
+from .utils import _decode, _download_and_extract, _split_ltsf
 
 __all__ = ['ExchangeRateDataset']
 
@@ -54,7 +54,7 @@ class ExchangeRateDataset(TensorSeriesDataset):
             download=download
         )
 
-        df = pd.read_csv(buff, header=None)
+        df = pd.read_csv(_decode(buff), header=None)
 
         data = np.array(df, dtype=np.float32).T
         # In the pre-processing applied by Zeng et al., the last two channels

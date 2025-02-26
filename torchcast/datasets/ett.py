@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _download_and_extract
+from .utils import _decode, _download_and_extract
 
 __all__ = ['ElectricityTransformerDataset']
 
@@ -86,7 +86,7 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
         for name in file_names:
             url = ETT_URL.format(name=name)
             buff = _download_and_extract(url, name, path, download=download)
-            dfs.append(pd.read_csv(buff))
+            dfs.append(pd.read_csv(_decode(buff)))
             dates = dfs[-1].pop('date')
 
         dates = pd.to_datetime(dates, format='%Y-%m-%d %H:%M:%S')

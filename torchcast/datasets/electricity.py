@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _download_and_extract, _split_ltsf
+from .utils import _decode, _download_and_extract, _split_ltsf
 
 __all__ = ['ElectricityLoadDataset']
 
@@ -59,6 +59,7 @@ class ElectricityLoadDataset(TensorSeriesDataset):
             path,
             download=download,
         )
+        buff = _decode(buff)
 
         df = pd.read_csv(buff, header=None)
 

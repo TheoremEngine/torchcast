@@ -4,7 +4,7 @@ import torch
 
 from ..data import Metadata, TensorSeriesDataset
 from ._file_readers import parse_ts
-from .utils import _download_and_extract
+from .utils import _decode, _download_and_extract
 
 __all__ = ['UCRDataset', 'UEADataset']
 
@@ -129,6 +129,7 @@ class UCRDataset(TensorSeriesDataset):
             path,
             download=download,
         )
+        buff = _decode(buff)
         data, attrs = parse_ts(buff.read())
         data = torch.from_numpy(data)
         labels = torch.from_numpy(attrs['labels']).view(-1, 1, 1)
