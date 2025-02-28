@@ -14,6 +14,11 @@ __all__ = ['UTSDDataset']
 
 
 class UTSDDataset(TensorSeriesDataset):
+    '''
+    This is the `UTSD <https://github.com/thuml/Large-Time-Series-Model>`__
+    pre-training dataset, first published in `Liu et al. 2024
+    <https://arxiv.org/abs/2402.02368>`__.
+    '''
     def __init__(self, task: str, split: str = 'default',
                  path: Optional[str] = None,
                  download: Union[bool, str] = True,
