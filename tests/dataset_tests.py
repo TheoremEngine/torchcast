@@ -10,7 +10,6 @@ import torch
 import torchcast as tc
 
 
-'''
 class AirQualityTest(unittest.TestCase):
     def test_full_up(self):
         ds = tc.datasets.AirQualityDataset()
@@ -418,7 +417,6 @@ class UtilsTests(unittest.TestCase):
         )
 
 
-'''
 class UTSDTests(unittest.TestCase):
     def test_fetch(self):
         ds = tc.datasets.UTSDDataset('baian', return_length=128)
