@@ -125,6 +125,25 @@ class MonashTests(unittest.TestCase):
             self.assertEqual(t[1], pd.Timestamp(end).value)
 
 
+class MonsterTests(unittest.TestCase):
+    def test_tiselac(self):
+        # We test the most complicated case for subsetting here
+        ds = tc.datasets.MonsterDataset('Tiselac', split='train', fold=1)
+
+        self.assertEqual(len(ds.data), 2)
+
+        self.assertEqual(ds.data[0].shape, (79446, 10, 23))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        should_be = torch.tensor(
+            [46, 34, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 23, 34, 32,
+             31, 38, 44, 50, 57, 57, 57], dtype=torch.int64
+        )
+        self.assertTrue((ds.data[0][0, 0, :] == should_be).all())
+
+        self.assertEqual(ds.data[1].shape, (79446, 1, 1))
+        self.assertEqual(ds.data[1].dtype, torch.int64)
+
+
 class TFBTests(unittest.TestCase):
     def test_multivariate(self):
         ds = tc.datasets.TFBDataset('Wind')

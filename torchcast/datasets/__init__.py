@@ -5,6 +5,7 @@ from .exchange_rate import *
 from .illness import *
 from .largest import *
 from .monash import *
+from .monster import *
 from .tfb import *
 from .traffic import *
 from .ucr import *
