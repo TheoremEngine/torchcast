@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torchcast as tc
+from torchcast.datasets.utils import _timestamp_to_int
 
 
 class AirQualityTest(unittest.TestCase):
@@ -59,7 +60,7 @@ class MonashTests(unittest.TestCase):
 
         self.assertTrue(isclose(ds.data[1][0, -1, -1].item(), 30593))
         delta_t = ds.data[0][0, 0, 1:] - ds.data[0][0, 0, :-1]
-        self.assertTrue((delta_t == 24 * 60 * 60 * 1_000_000_000).all())
+        self.assertTrue((delta_t == 24 * 60 * 60 * 1_000_000).all())
 
     def test_cif_2016(self):
         # CIF2016 is another special case, since it has variable horizon per
@@ -122,7 +123,7 @@ class MonashTests(unittest.TestCase):
             self.assertTrue(isinstance(t, np.ndarray))
             self.assertEqual(t.shape, (2,))
             self.assertEqual(t.dtype, np.int64)
-            self.assertEqual(t[1], pd.Timestamp(end).value)
+            self.assertEqual(t[1], _timestamp_to_int(pd.Timestamp(end)))
 
 
 class MonsterTests(unittest.TestCase):
@@ -152,8 +153,12 @@ class TFBTests(unittest.TestCase):
 
         self.assertEqual(ds.data[0].shape, (1, 1, 48673))
         self.assertEqual(ds.data[0].dtype, torch.int64)
-        self.assertEqual(ds.data[0][0, 0, 0], pd.Timestamp(2020, 1, 1).value)
-        self.assertEqual(ds.data[0][0, 0, -1], pd.Timestamp(2021, 5, 22).value)
+        self.assertEqual(
+            ds.data[0][0, 0, 0], _timestamp_to_int(pd.Timestamp(2020, 1, 1))
+        )
+        self.assertEqual(
+            ds.data[0][0, 0, -1], _timestamp_to_int(pd.Timestamp(2021, 5, 22))
+        )
         self.assertEqual(ds.metadata[0].name, 'Datetime')
         self.assertEqual(ds.metadata[0].channel_names, None)
         self.assertEqual(ds.metadata[0].series_names, None)
@@ -175,9 +180,12 @@ class TFBTests(unittest.TestCase):
 
         self.assertEqual(ds.data[0].shape, (1, 1, 52560))
         self.assertEqual(ds.data[0].dtype, torch.int64)
-        self.assertEqual(ds.data[0][0, 0, 0], pd.Timestamp(2006, 1, 1).value)
         self.assertEqual(
-            ds.data[0][0, 0, -1], pd.Timestamp(2006, 12, 31, 23, 50).value
+            ds.data[0][0, 0, 0], _timestamp_to_int(pd.Timestamp(2006, 1, 1))
+        )
+        self.assertEqual(
+            ds.data[0][0, 0, -1],
+            _timestamp_to_int(pd.Timestamp(2006, 12, 31, 23, 50))
         )
         self.assertEqual(ds.metadata[0].name, 'Datetime')
         self.assertEqual(ds.metadata[0].channel_names, None)

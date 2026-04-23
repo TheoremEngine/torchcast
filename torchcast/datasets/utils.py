@@ -8,6 +8,7 @@ import tarfile
 from typing import Optional, Union
 import zipfile
 
+import numpy as np
 import pandas as pd
 import requests
 import torch
@@ -310,3 +311,22 @@ def _split_ltsf(split: str, input_length: Optional[int],
 
     else:
         raise ValueError(split)
+
+
+def _timestamp_to_int(x: Union[pd.Series, pd.Timestamp]) \
+        -> Union[np.array, int]:
+    '''
+    This utility function is necessary because pandas changed its internal
+    representation of Timestamps between version 2 and 3. Previously,
+    pd.Timestamp.value returned the number of microseconds since the epoch
+    start, now it returns the number of nanoseconds. Since we want to support
+    both old and new pandas, we need to handle this more carefully than
+    before.
+    '''
+    out = (x - pd.Timestamp(1970, 1, 1)) // pd.Timedelta(1, unit='us')
+    if isinstance(out, pd.Series):
+        # This copy is needed because a pd.Series is write-protected, and that
+        # will be inherited by out.values, but a torch.Tensor cannot be write-
+        # protected.
+        out = out.values.copy()
+    return out
