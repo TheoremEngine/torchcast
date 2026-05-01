@@ -103,28 +103,6 @@ class MonashTests(unittest.TestCase):
         self.assertTrue(isclose(ds.data[1][0, 0, 0], 9.0))
         self.assertTrue(isclose(ds.data[1][0, 0, -1], 14.0))
 
-    def test_create_time_array(self):
-        start = datetime(1999, 1, 1)
-
-        cases = {
-            'yearly': datetime(2000, 1, 1),
-            'quarterly': datetime(1999, 4, 1),
-            'monthly': datetime(1999, 2, 1),
-            'weekly': datetime(1999, 1, 8),
-            'daily': datetime(1999, 1, 2),
-            'hourly': datetime(1999, 1, 1, hour=1),
-            'half_hourly': datetime(1999, 1, 1, minute=30),
-            '10_minutes': datetime(1999, 1, 1, minute=10),
-            '4_seconds': datetime(1999, 1, 1, second=4),
-        }
-
-        for freq, end in cases.items():
-            t = tc.datasets.monash._create_time_array(start, freq, 2)
-            self.assertTrue(isinstance(t, np.ndarray))
-            self.assertEqual(t.shape, (2,))
-            self.assertEqual(t.dtype, np.int64)
-            self.assertEqual(t[1], _timestamp_to_int(pd.Timestamp(end)))
-
 
 class MonsterTests(unittest.TestCase):
     def test_tiselac(self):
@@ -143,6 +121,78 @@ class MonsterTests(unittest.TestCase):
 
         self.assertEqual(ds.data[1].shape, (79446, 1, 1))
         self.assertEqual(ds.data[1].dtype, torch.int64)
+
+
+class TempusTests(unittest.TestCase):
+    def test_covariate(self):
+        ds = tc.datasets.TempusDataset('advertising_sales_covariate')
+
+        self.assertEqual(len(ds.data), 3)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 143))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+
+        self.assertEqual(ds.data[1].shape, (1, 45, 143))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        should_be = torch.tensor(
+            [1643690.9, 1641957.44, 1611968.17, 1409727.59]
+        )
+        self.assertTrue((ds.data[1][0, 0, :4] == should_be).all())
+
+        self.assertEqual(ds.data[2].shape, (1, 225, 143))
+        self.assertEqual(ds.data[2].dtype, torch.float32)
+
+    def test_multivariate(self):
+        ds = tc.datasets.TempusDataset('soil_nature_multivariate')
+
+        self.assertEqual(len(ds.data), 2)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 4323))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+
+        self.assertEqual(ds.data[1].shape, (1, 127, 4323))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        should_be = torch.tensor([33.51])
+        self.assertTrue((ds.data[1][0, 0, 0] == should_be).all())
+        self.assertTrue(isnan(ds.data[1][0, 0, 1].item()))
+
+    def test_multivariate_alternate_format(self):
+        ds = tc.datasets.TempusDataset('goldindia_real_multivariate')
+
+        self.assertEqual(len(ds.data), 2)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 4024))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+
+        self.assertEqual(ds.data[1].shape, (1, 5, 4024))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        should_be = torch.tensor([29542.0, 29975.0, 29727.0, 29279.0])
+        self.assertTrue((ds.data[1][0, 0, :4] == should_be).all())
+        self.assertTrue(isnan(ds.data[1][0, 0, 4].item()))
+
+    def test_univariate(self):
+        ds = tc.datasets.TempusDataset('employees_healthcare_univariate')
+
+        self.assertEqual(len(ds.data), 2)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 427))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+
+        self.assertEqual(ds.data[1].shape, (1, 1, 427))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        should_be = torch.tensor([8014.0, 8048.7, 8092.3, 8120.5])
+        self.assertTrue((ds.data[1][0, 0, :4] == should_be).all())
+
+    def test_univariate_alternate_format(self):
+        # Also tests null handling in time
+        ds = tc.datasets.TempusDataset('forestfires_continuous_univariate')
+
+        self.assertEqual(len(ds.data), 1)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 517))
+        self.assertEqual(ds.data[0].dtype, torch.float32)
+        should_be = torch.tensor([8.2, 18.0, 14.6, 8.3])
+        self.assertTrue((ds.data[0][0, 0, :4] == should_be).all())
 
 
 class TFBTests(unittest.TestCase):
@@ -292,6 +342,28 @@ class UCRTests(unittest.TestCase):
 
 
 class UtilsTests(unittest.TestCase):
+    def test_create_time_array(self):
+        start = datetime(1999, 1, 1)
+
+        cases = {
+            'yearly': datetime(2000, 1, 1),
+            'quarterly': datetime(1999, 4, 1),
+            'monthly': datetime(1999, 2, 1),
+            'weekly': datetime(1999, 1, 8),
+            'daily': datetime(1999, 1, 2),
+            'hourly': datetime(1999, 1, 1, hour=1),
+            'half_hourly': datetime(1999, 1, 1, minute=30),
+            '10_minutes': datetime(1999, 1, 1, minute=10),
+            '4_seconds': datetime(1999, 1, 1, second=4),
+        }
+
+        for freq, end in cases.items():
+            t = tc.datasets.utils._create_time_array(start, freq, 2)
+            self.assertTrue(isinstance(t, np.ndarray))
+            self.assertEqual(t.shape, (2,))
+            self.assertEqual(t.dtype, np.int64)
+            self.assertEqual(t[1], _timestamp_to_int(pd.Timestamp(end)))
+
     def test_download_and_extract(self):
         # Use air_quality for this, as it's a zip file.
         with tempfile.TemporaryDirectory() as temp_root:

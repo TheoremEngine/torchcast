@@ -6,7 +6,11 @@ import pandas as pd
 import torch
 
 from ..data import Metadata, TensorSeriesDataset
-from .utils import _decode, _download_from_google_drive_and_extract
+from .utils import (
+    _decode,
+    _download_from_google_drive_and_extract,
+    _timestamp_to_int
+)
 
 __all__ = ['TFBDataset']
 
@@ -110,7 +114,7 @@ class TFBDataset(TensorSeriesDataset):
         if (df.index.dtype == np.float64) or (df.index.dtype == np.int64):
             data, meta = (data,), [meta]
         else:
-            t = torch.from_numpy(np.array(df.index.astype(np.int64)))
+            t = torch.from_numpy(_timestamp_to_int(df.index))
             t = t.view(1, 1, -1)
             data = (t, data)
             meta = [Metadata(name='Datetime'), meta]

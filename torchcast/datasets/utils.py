@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import lru_cache
 import gzip
 from io import BytesIO, StringIO
@@ -36,6 +37,77 @@ def _add_missing_values(df: pd.DataFrame, **variables) -> pd.DataFrame:
     df = df.set_index(list(var_names))
     df = df.reindex(mind, fill_value=float('nan'))
     return df.reset_index()
+
+
+MINUTE_US = 60 * 1_000_000
+HOUR_US = 60 * MINUTE_US
+DAY_US = 24 * HOUR_US
+
+
+def _create_time_array(start: datetime, frequency: str, n: int) \
+        -> np.ndarray:
+    # Yearly, quarterly, and monthly need to be parsed as lists initially
+    # because their duration in nanoseconds can vary.
+    if frequency in {'yearly', '1Y'}:
+        out = [
+            datetime(year=(start.year + t), month=start.month, day=start.day,
+                     hour=start.hour, minute=start.minute, second=start.second)
+            for t in range(n)
+        ]
+        return _timestamp_to_int(pd.Series(out))
+    elif frequency in {'quarterly', '1Q'}:
+        out = [
+            datetime(year=(start.year + (start.month + t) // 12),
+                     month=(((start.month + t - 1) % 12) + 1), day=start.day,
+                     hour=start.hour, minute=start.minute, second=start.second)
+            for t in range(0, 3 * n, 3)
+        ]
+        return _timestamp_to_int(pd.Series(out))
+    elif frequency in {'monthly', '1M'}:
+        out = [
+            datetime(year=(start.year + (start.month + t) // 12),
+                     month=(((start.month + t - 1) % 12) + 1), day=start.day,
+                     hour=start.hour, minute=start.minute, second=start.second)
+            for t in range(n)
+        ]
+        return _timestamp_to_int(pd.Series(out))
+    elif frequency in {'weekly', '1W'}:
+        start = _timestamp_to_int(pd.Timestamp(start))
+        return np.arange(
+            start, start + n * (7 * DAY_US), 7 * DAY_US, dtype=np.int64,
+        )
+    elif frequency in {'daily', '1D'}:
+        start = _timestamp_to_int(pd.Timestamp(start))
+        return np.arange(
+            start, start + n * DAY_US, DAY_US, dtype=np.int64,
+        )
+    elif frequency == 'hourly':
+        start = _timestamp_to_int(pd.Timestamp(start))
+        return np.arange(
+            start, start + n * HOUR_US, HOUR_US, dtype=np.int64,
+        )
+    elif frequency in {'half_hourly', '30T'}:
+        start = _timestamp_to_int(pd.Timestamp(start))
+        return np.arange(
+            start, start + n * 30 * MINUTE_US, 30 * MINUTE_US, dtype=np.int64,
+        )
+    elif frequency == '10_minutes':
+        start = _timestamp_to_int(pd.Timestamp(start))
+        return np.arange(
+            start, start + n * 10 * MINUTE_US, 10 * MINUTE_US, dtype=np.int64,
+        )
+    elif frequency in {'T', '1T'}:
+        start = _timestamp_to_int(pd.Timestamp(start))
+        return np.arange(
+            start, start + n * MINUTE_US, MINUTE_US, dtype=np.int64,
+        )
+    elif frequency == '4_seconds':
+        start = _timestamp_to_int(pd.Timestamp(start))
+        return np.arange(
+            start, start + n * 4_000_000, 4_000_000, dtype=np.int64,
+        )
+    else:
+        raise ValueError(f'Did not recognize frequency {frequency}')
 
 
 def _decode(buff: BytesIO, encoding: str = 'utf-8') -> StringIO:
@@ -313,7 +385,7 @@ def _split_ltsf(split: str, input_length: Optional[int],
         raise ValueError(split)
 
 
-def _timestamp_to_int(x: Union[pd.Series, pd.Timestamp]) \
+def _timestamp_to_int(x: Union[pd.DatetimeIndex, pd.Series, pd.Timestamp]) \
         -> Union[np.array, int]:
     '''
     This utility function is necessary because pandas changed its internal
@@ -323,7 +395,16 @@ def _timestamp_to_int(x: Union[pd.Series, pd.Timestamp]) \
     both old and new pandas, we need to handle this more carefully than
     before.
     '''
-    out = (x - pd.Timestamp(1970, 1, 1)) // pd.Timedelta(1, unit='us')
+    if isinstance(x, pd.DatetimeIndex):
+        x = x.to_series()
+
+    example = x.iloc[0] if isinstance(x, pd.Series) else x
+    if example.tz is None:
+        epoch_start = pd.Timestamp(1970, 1, 1)
+    else:
+        epoch_start = pd.Timestamp(1970, 1, 1, tz='UTC')
+
+    out = (x - epoch_start) // pd.Timedelta(1, unit='us')
     if isinstance(out, pd.Series):
         # This copy is needed because a pd.Series is write-protected, and that
         # will be inherited by out.values, but a torch.Tensor cannot be write-

@@ -1,15 +1,13 @@
-from datetime import datetime
 import os
 from typing import Callable, List, Optional, Union
 import warnings
 
 import numpy as np
-import pandas as pd
 import torch
 
 from ..data import Metadata, TensorSeriesDataset
 from ._file_readers import parse_tsf
-from .utils import _decode, _download_and_extract, _timestamp_to_int
+from .utils import _create_time_array, _decode, _download_and_extract
 
 __all__ = ['MonashArchiveDataset']
 
@@ -231,72 +229,6 @@ class MonashArchiveDataset(TensorSeriesDataset):
             transform=transform,
             metadata=metadata,
         )
-
-
-MINUTE_US = 60 * 1_000_000
-HOUR_US = 60 * MINUTE_US
-DAY_US = 24 * HOUR_US
-
-
-def _create_time_array(start: datetime, frequency: str, n: int) \
-        -> np.ndarray:
-    # Yearly, quarterly, and monthly need to be parsed as lists initially
-    # because their duration in nanoseconds can vary.
-    if frequency == 'yearly':
-        out = [
-            datetime(year=(start.year + t), month=start.month, day=start.day,
-                     hour=start.hour, minute=start.minute, second=start.second)
-            for t in range(n)
-        ]
-        return _timestamp_to_int(pd.Series(out))
-    elif frequency == 'quarterly':
-        out = [
-            datetime(year=(start.year + (start.month + t) // 12),
-                     month=(((start.month + t - 1) % 12) + 1), day=start.day,
-                     hour=start.hour, minute=start.minute, second=start.second)
-            for t in range(0, 3 * n, 3)
-        ]
-        return _timestamp_to_int(pd.Series(out))
-    elif frequency == 'monthly':
-        out = [
-            datetime(year=(start.year + (start.month + t) // 12),
-                     month=(((start.month + t - 1) % 12) + 1), day=start.day,
-                     hour=start.hour, minute=start.minute, second=start.second)
-            for t in range(n)
-        ]
-        return _timestamp_to_int(pd.Series(out))
-    elif frequency == 'weekly':
-        start = _timestamp_to_int(pd.Timestamp(start))
-        return np.arange(
-            start, start + n * (7 * DAY_US), 7 * DAY_US, dtype=np.int64,
-        )
-    elif frequency == 'daily':
-        start = _timestamp_to_int(pd.Timestamp(start))
-        return np.arange(
-            start, start + n * DAY_US, DAY_US, dtype=np.int64,
-        )
-    elif frequency == 'hourly':
-        start = _timestamp_to_int(pd.Timestamp(start))
-        return np.arange(
-            start, start + n * HOUR_US, HOUR_US, dtype=np.int64,
-        )
-    elif frequency == 'half_hourly':
-        start = _timestamp_to_int(pd.Timestamp(start))
-        return np.arange(
-            start, start + n * 30 * MINUTE_US, 30 * MINUTE_US, dtype=np.int64,
-        )
-    elif frequency == '10_minutes':
-        start = _timestamp_to_int(pd.Timestamp(start))
-        return np.arange(
-            start, start + n * 10 * MINUTE_US, 10 * MINUTE_US, dtype=np.int64,
-        )
-    elif frequency == '4_seconds':
-        start = _timestamp_to_int(pd.Timestamp(start))
-        return np.arange(
-            start, start + n * 4_000_000, 4_000_000, dtype=np.int64,
-        )
-    else:
-        raise ValueError(f'Did not recognize frequency {frequency}')
 
 
 def _split(tensors: List[torch.Tensor], split: str,
