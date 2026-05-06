@@ -69,7 +69,7 @@ UCR_DATASETS = {
     'Yoga': 11198408,
 }
 
-UEA_DATASET = {
+UEA_DATASETS = {
     'Alzheimers': 15500801, 'AppliancesEnergy_disc': 18497240,
     'ArticularyWordRecognition': 11204924,
     'AsphaltObstaclesCoordinates': 18497270,
