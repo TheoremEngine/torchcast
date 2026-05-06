@@ -55,7 +55,7 @@ def _create_time_array(start: datetime, frequency: str, n: int) \
             for t in range(n)
         ]
         return _timestamp_to_int(pd.Series(out))
-    elif frequency in {'quarterly', '1Q'}:
+    elif frequency in {'quarterly', '1Q', 'Q'}:
         out = [
             datetime(year=(start.year + (start.month + t) // 12),
                      month=(((start.month + t - 1) % 12) + 1), day=start.day,
@@ -63,7 +63,7 @@ def _create_time_array(start: datetime, frequency: str, n: int) \
             for t in range(0, 3 * n, 3)
         ]
         return _timestamp_to_int(pd.Series(out))
-    elif frequency in {'monthly', '1M'}:
+    elif frequency in {'monthly', '1M', 'M'}:
         out = [
             datetime(year=(start.year + (start.month + t) // 12),
                      month=(((start.month + t - 1) % 12) + 1), day=start.day,
@@ -71,17 +71,20 @@ def _create_time_array(start: datetime, frequency: str, n: int) \
             for t in range(n)
         ]
         return _timestamp_to_int(pd.Series(out))
-    elif frequency in {'weekly', '1W'}:
+    elif frequency in {'weekly', '1W', 'W'}:
         start = _timestamp_to_int(pd.Timestamp(start))
         return np.arange(
             start, start + n * (7 * DAY_US), 7 * DAY_US, dtype=np.int64,
         )
-    elif frequency in {'daily', '1D'}:
+    elif frequency in {'1B', 'B'}:
+        out = pd.bdate_range(start, periods=n)
+        return _timestamp_to_int(out)
+    elif frequency in {'daily', '1D', 'D'}:
         start = _timestamp_to_int(pd.Timestamp(start))
         return np.arange(
             start, start + n * DAY_US, DAY_US, dtype=np.int64,
         )
-    elif frequency == 'hourly':
+    elif frequency in {'hourly', '1H', 'H'}:
         start = _timestamp_to_int(pd.Timestamp(start))
         return np.arange(
             start, start + n * HOUR_US, HOUR_US, dtype=np.int64,
@@ -91,10 +94,19 @@ def _create_time_array(start: datetime, frequency: str, n: int) \
         return np.arange(
             start, start + n * 30 * MINUTE_US, 30 * MINUTE_US, dtype=np.int64,
         )
-    elif frequency == '10_minutes':
+    elif frequency.endswith('_minutes'):
         start = _timestamp_to_int(pd.Timestamp(start))
+        frequency = int(frequency.removesuffix('_minutes'))
         return np.arange(
-            start, start + n * 10 * MINUTE_US, 10 * MINUTE_US, dtype=np.int64,
+            start, start + n * frequency * MINUTE_US, frequency * MINUTE_US,
+            dtype=np.int64,
+        )
+    elif frequency.endswith('T'):
+        start = _timestamp_to_int(pd.Timestamp(start))
+        frequency = int(frequency.removesuffix('T'))
+        return np.arange(
+            start, start + n * frequency * MINUTE_US, frequency * MINUTE_US,
+            dtype=np.int64,
         )
     elif frequency in {'T', '1T'}:
         start = _timestamp_to_int(pd.Timestamp(start))

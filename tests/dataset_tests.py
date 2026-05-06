@@ -262,6 +262,105 @@ class TFBTests(unittest.TestCase):
         self.assertEqual(ds.metadata[0].series_names, None)
 
 
+class TIMETests(unittest.TestCase):
+    def test_australian_solar(self):
+        # This test case: only one row, has variate_names, freq H, target is
+        # multivariate
+        ds = tc.datasets.TIMEDataset('Australia_Solar')
+
+        self.assertEqual(len(ds.data), 2)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 35064))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, ['item0'])
+
+        self.assertEqual(ds.data[1].shape, (1, 3, 35064))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        should_be = torch.tensor(
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 67.083336]
+        )
+        self.assertTrue((ds.data[1][0, 0, :8] == should_be).all())
+        self.assertEqual(ds.metadata[1].name, 'Target')
+        self.assertEqual(
+            ds.metadata[1].channel_names,
+            ['solar_63726', 'solar_51616', 'solar_31378'],
+        )
+        self.assertEqual(ds.metadata[1].series_names, ['item0'])
+
+    def test_auto_production(self):
+        # This test case: only one row, no variate_names, freq M, target is
+        # univariate
+        ds = tc.datasets.TIMEDataset('Auto_Production_SF')
+
+        self.assertEqual(len(ds.data), 2)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 367))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, ['RSF_AutoProduction'])
+
+        self.assertEqual(ds.data[1].shape, (1, 1, 367))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        should_be = torch.tensor(
+            [98.9, 104.64, 108.03, 105.93, 113.46, 103.34]
+        )
+        self.assertTrue((ds.data[1][0, 0, :6] == should_be).all())
+        self.assertEqual(ds.metadata[1].name, 'Target')
+        self.assertEqual(ds.metadata[1].channel_names, None)
+        self.assertEqual(ds.metadata[1].series_names, ['RSF_AutoProduction'])
+
+    def test_cphl(self):
+        # This test case: two rows, no variate_names, freq 15T, target is
+        # univariate, variable series length
+
+        ds = tc.datasets.TIMEDataset('CPHL', '15T')
+
+        self.assertEqual(len(ds.data), 2)
+
+        self.assertEqual(ds.data[0].shape, (2, 1, 10831))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, ['NRSROT', 'WATR20'])
+
+        self.assertEqual(ds.data[1].shape, (2, 1, 10831))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        should_be = torch.tensor(
+            [0.0253, 0.4889, 0.5485, 0.5459, 0.5358, 0.4674]
+        )
+        self.assertTrue((ds.data[1][0, 0, :6] == should_be).all(), ds.data[1][0, 0, :6])
+        self.assertEqual(ds.metadata[1].name, 'Target')
+        self.assertEqual(ds.metadata[1].channel_names, None)
+        self.assertEqual(ds.metadata[1].series_names, ['NRSROT', 'WATR20'])
+
+    def test_oil_price(self):
+        # This test case: one row, has variate_names, freq B, target is
+        # multivariate
+
+        ds = tc.datasets.TIMEDataset('Oil_Price')
+
+        self.assertEqual(len(ds.data), 2)
+
+        self.assertEqual(ds.data[0].shape, (1, 1, 5035))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, ['item0'])
+
+        self.assertEqual(ds.data[1].shape, (1, 12, 5035))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+        should_be = torch.tensor(
+            [65.52, 66.04, 65.01, 66.4, 67.57, 68.17]
+        )
+        self.assertTrue((ds.data[1][0, 0, :6] == should_be).all())
+        self.assertEqual(ds.metadata[1].name, 'Target')
+        self.assertEqual(ds.metadata[1].channel_names[0], 'COP_Brent-Europe')
+        self.assertEqual(ds.metadata[1].series_names, ['item0'])
+
+
 class UCRTests(unittest.TestCase):
     def test_ucr_full_up(self):
         ds = tc.datasets.UCRDataset('Crop', 'train')
@@ -350,6 +449,7 @@ class UtilsTests(unittest.TestCase):
             'quarterly': datetime(1999, 4, 1),
             'monthly': datetime(1999, 2, 1),
             'weekly': datetime(1999, 1, 8),
+            'B': datetime(1999, 1, 4),  # Business days
             'daily': datetime(1999, 1, 2),
             'hourly': datetime(1999, 1, 1, hour=1),
             'half_hourly': datetime(1999, 1, 1, minute=30),
