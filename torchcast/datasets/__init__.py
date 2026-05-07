@@ -6,6 +6,7 @@ from .illness import *
 from .largest import *
 from .monash import *
 from .monster import *
+from .stead import *
 from .tempus import *
 from .tfb import *
 from .time import *

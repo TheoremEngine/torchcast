@@ -123,6 +123,23 @@ class MonsterTests(unittest.TestCase):
         self.assertEqual(ds.data[1].dtype, torch.int64)
 
 
+class STEADSTests(unittest.TestCase):
+    def test_sample(self):
+        root = os.path.dirname(__file__)
+        ds = tc.datasets.STEADDataset(os.path.join('data/steads_sample.hdf5'))
+        x, y = ds[0]
+
+        self.assertTrue(isinstance(x, torch.Tensor))
+        self.assertEqual(x.shape, (3, 6000))
+        self.assertEqual(x.dtype, torch.float32)
+        self.assertTrue((x[:, 0] == 0).all())
+
+        self.assertTrue(isinstance(y, torch.Tensor))
+        self.assertEqual(y.shape, (1, 1))
+        self.assertEqual(y.dtype, torch.int64)
+        self.assertEqual(y.item(), 1)
+
+
 class TempusTests(unittest.TestCase):
     def test_covariate(self):
         ds = tc.datasets.TempusDataset('advertising_sales_covariate')
@@ -666,7 +683,7 @@ class UTSDTests(unittest.TestCase):
         ])
 
         self.assertEqual(len(ds.data), 1)
-        self.assertTrue(isinstance(ds.data[0], tc.data.ListOfTensors))
+        self.assertTrue(isinstance(ds.data[0], tc.data.ListOfArrayLike))
         self.assertEqual(ds.data[0].shape, (51, 18, 180142))
         self.assertEqual(ds.data[0].dtype, torch.float32)
 

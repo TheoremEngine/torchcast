@@ -15,15 +15,16 @@ class ArrayLike(Protocol):
     ndim: int
 
 
-class ListOfTensors:
+class ListOfArrayLike:
     '''
-    This class encapsulates a list of :class:`torch.Tensor`, and gives it an
-    external API similar to a single :class:`torch.Tensor`. This is used so
-    that we can have a single multiseries whose constituent series are varying
-    lengths without wasting memory.
+    This class encapsulates a list of :class:`ArrayLike` objects, such as
+    :class:`torch.Tensor` or :class:`h5py.Dataset`, and gives it an external
+    API similar to a single :class:`torch.Tensor`. This is used so that we can
+    have a single multiseries whose constituent series are varying lengths
+    without wasting memory.
     '''
     def __init__(self, tensors: List[ArrayLike]):
-        self.tensors = [_coerce_to_series(x) for x in tensors]
+        self.tensors = tensors
         if len({x.dtype for x in self.tensors}) > 1:
             raise ValueError('Received multiple dtypes')
         if len({x.shape[0] for x in self.tensors}) != 1:
@@ -66,6 +67,15 @@ class ListOfTensors:
         return (len(self.tensors), self.tensors[0].shape[0], t)
 
 
+class ListOfTensors(ListOfArrayLike):
+    '''
+    This is a :class:`ListOfArrayLike` that is specialized to handling
+    :class:`torch.Tensor`.
+    '''
+    def __init__(self, tensors: List[ArrayLike]):
+        super().__init__([_coerce_to_series(x) for x in tensors])
+
+
 def _coerce_to_multiseries(x: ArrayLike) -> Union[torch.Tensor, ListOfTensors]:
     '''
     Convenience function to coerce an array-like object to a
@@ -77,11 +87,8 @@ def _coerce_to_multiseries(x: ArrayLike) -> Union[torch.Tensor, ListOfTensors]:
         and isinstance(x[0], (np.ndarray, torch.Tensor))
     ):
         if len({_x.shape[-1] for _x in x}) > 1:
-            # ListOfTensors.__init__ calls _coerce_to_series, which should
-            # handle shape checking
             return ListOfTensors(x)
         else:
-            # _coerce_to_series should handle shape checking
             return torch.stack([_coerce_to_series(_x) for _x in x], dim=0)
 
     x = torch.as_tensor(x)

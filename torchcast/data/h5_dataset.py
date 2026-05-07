@@ -22,10 +22,6 @@ class H5View:
             view = []
         if len(view) < h5_data.ndim:
             view += [slice(0, s) for s in h5_data.shape[len(view):]]
-        # TODO: Should coerce 1- and 2-dimensional datasets instead of throwing
-        # an error.
-        if h5_data.ndim != 3:
-            raise ValueError('H5 dataset is not 3-dimensional')
         self.view = view
         self.h5_data = h5_data
 
