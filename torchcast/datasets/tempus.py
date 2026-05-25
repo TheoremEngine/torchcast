@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -72,6 +72,8 @@ class TempusDataset(TensorSeriesDataset):
     found `here<https://github.com/Smlcrm/TempusBench>`__ and  documented by
     `Goktas et al. 2026 <https://arxiv.org/abs/2604.11529>`__.
     '''
+    tasks: List[str] = COVARIATE_TASKS + MULTIVARIATE_TASKS + UNIVARIATE_TASKS
+
     def __init__(self, task: str, path: Optional[str] = None,
                  download: bool = True, transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):

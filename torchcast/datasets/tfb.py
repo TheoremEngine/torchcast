@@ -32,6 +32,12 @@ BIG_VAL_TASKS = {
 }
 
 
+def _load_tfb_manifest() -> List[str]:
+    path = os.path.join(os.path.dirname(__file__), 'tfb.txt')
+    with open(path, 'r') as tasks_file:
+        return [row[:-1] for row in tasks_file.readlines()]
+
+
 class TFBDataset(TensorSeriesDataset):
     '''
     This dataset provides the `Qiu et al. 2024
@@ -43,7 +49,7 @@ class TFBDataset(TensorSeriesDataset):
     This collection includes the LTSF collection as a subset, but the data is
     pre-processed and split in different ways.
     '''
-    _tasks: Optional[List[str]] = None
+    tasks: List[str] = _load_tfb_manifest()
 
     def __init__(self, task: str, split: str = 'all',
                  path: Optional[str] = None, download: bool = True,
@@ -126,14 +132,6 @@ class TFBDataset(TensorSeriesDataset):
             *data, return_length=return_length, transform=transform,
             metadata=meta,
         )
-
-    @property
-    def tasks(self) -> List[str]:
-        if self._tasks is None:
-            path = os.path.join(os.path.dirname(__file__), 'tfb.txt')
-            with open(path, 'r') as tasks_file:
-                self._tasks = [row[:-1] for row in tasks_file.readlines()]
-        return self._tasks
 
 
 def _split_tfb(split: str, train_percent: float, *tensors: torch.Tensor):

@@ -144,7 +144,7 @@ class UCRDataset(TensorSeriesDataset):
         https://www.timeseriesclassification.com/
 
     '''
-    tasks: List[str] = list(UCR_DATASETS)
+    tasks: List[str] = list(UCR_DATASETS.keys())
 
     def __init__(self, task: str, split: str = 'train',
                  path: Optional[str] = None,
@@ -207,7 +207,7 @@ class UEADataset(TensorSeriesDataset):
         Learning: an Archive for Multivariate Time Series Classification.''
         `arXiv: 2603.20352. <https://arxiv.org/abs/2603.20352>`__
     '''
-    tasks: List[str] = list(UEA_DATASETS)
+    tasks: List[str] = list(UEA_DATASETS.keys())
 
     def __init__(self, task: str, split: str = 'train',
                  path: Optional[str] = None,

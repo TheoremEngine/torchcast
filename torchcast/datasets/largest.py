@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Iterable, Optional, Union
+from typing import Callable, Iterable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -26,6 +26,8 @@ class LargeSTDataset(TensorSeriesDataset):
 
     And unzipped.
     '''
+    tasks: List[str] = ['ca', 'gba', 'gla', 'sd']
+
     def __init__(self, root_path: str, years: Union[Iterable[int], int],
                  task: str = 'ca', split: str = 'all', scale: bool = True,
                  resample_time: bool = True,

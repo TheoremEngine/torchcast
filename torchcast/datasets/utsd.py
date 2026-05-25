@@ -1,7 +1,7 @@
-from functools import lru_cache
+from itertools import chain
 import json
 import os
-from typing import Callable, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -13,12 +13,21 @@ from .utils import _download_and_extract
 __all__ = ['UTSDDataset']
 
 
+def _load_utsd_manifest():
+    path = os.path.join(os.path.dirname(__file__), 'utsd_manifest.json')
+    with open(path, 'r') as f:
+        return json.load(f)
+
+
 class UTSDDataset(TensorSeriesDataset):
     '''
     This is the `UTSD <https://github.com/thuml/Large-Time-Series-Model>`__
     pre-training dataset, first published in `Liu et al. 2024
     <https://arxiv.org/abs/2402.02368>`__.
     '''
+    _manifest = _load_utsd_manifest()
+    tasks: List[str]
+
     def __init__(self, task: str, split: str = 'default',
                  path: Optional[str] = None,
                  download: Union[bool, str] = True,
@@ -38,22 +47,20 @@ class UTSDDataset(TensorSeriesDataset):
                 sequence to return. If not provided, returns an entire
                 sequence.
         '''
-        manifest = _get_utsd_manifest()
-
-        if split not in manifest:
+        if split not in self._manifest:
             raise ValueError(
                 f'Did not recognize split {split}; choose from '
-                f'{tuple(manifest.keys())}'
+                f'{tuple(self._manifest.keys())}'
             )
-        if task not in manifest[split]:
+        if task not in self._manifest[split]:
             raise ValueError(
                 f'Did not recognize task {task}; choose from '
-                f'{tuple(manifest[split].keys())}'
+                f'{tuple(self._manifest[split].keys())}'
             )
 
         # First, fetch the data from HuggingFace
         dfs = []
-        for remote_path in manifest[split][task]:
+        for remote_path in self._manifest[split][task]:
             buff = _download_and_extract(
                 remote_path,
                 os.path.basename(remote_path),
@@ -100,13 +107,7 @@ class UTSDDataset(TensorSeriesDataset):
         )
 
 
-@lru_cache
-def _get_utsd_manifest():
-    '''
-    This retrieves the JSON containing the index of which Parquet files contain
-    which series. It is broken out as a separate function so that we can
-    lru_cache the output.
-    '''
-    path = os.path.join(os.path.dirname(__file__), 'utsd_manifest.json')
-    with open(path, 'r') as f:
-        return json.load(f)
+UTSDDataset.tasks = list(chain(*(
+    UTSDDataset._manifest[k]
+    for k in ['default', 'UTSD-1G', 'UTSD-2G', 'UTSD-12G']
+)))

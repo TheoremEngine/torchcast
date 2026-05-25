@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
@@ -29,6 +29,8 @@ class MonsterDataset(TensorSeriesDataset):
     This is Monster time series classification dataset, first published in
     `Dempster et al. 2025 <https://arxiv.org/abs/2502.15122>`__.
     '''
+    tasks: List[str] = MONSTER_TASKS
+
     def __init__(self, task: str, split: str = 'train',
                  fold: int = 0, path: Optional[str] = None,
                  download: Union[bool, str] = True,

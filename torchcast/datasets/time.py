@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
@@ -46,6 +46,8 @@ class TIMEDataset(TensorSeriesDataset):
     `Qiao et al. 2026 <https://arxiv.org/abs/2602.12147>`__. It is intended for
     evaluating time series foundation models, and so has no train split.
     '''
+    tasks: List[str] = list(TIME_TASKS.keys())
+
     def __init__(self, task: str, freq: Optional[str] = None,
                  path: Optional[str] = None, download: Union[bool, str] = True,
                  transform: Optional[Callable] = None,
