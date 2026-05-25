@@ -174,7 +174,7 @@ class TempusTests(unittest.TestCase):
         self.assertTrue(isnan(ds.data[1][0, 0, 1].item()))
 
     def test_multivariate_alternate_format(self):
-        ds = tc.datasets.TempusDataset('goldindia_real_multivariate')
+        ds = tc.datasets.TempusDataset('gold_india_real_multivariate')
 
         self.assertEqual(len(ds.data), 2)
 
@@ -199,17 +199,6 @@ class TempusTests(unittest.TestCase):
         self.assertEqual(ds.data[1].dtype, torch.float32)
         should_be = torch.tensor([8014.0, 8048.7, 8092.3, 8120.5])
         self.assertTrue((ds.data[1][0, 0, :4] == should_be).all())
-
-    def test_univariate_alternate_format(self):
-        # Also tests null handling in time
-        ds = tc.datasets.TempusDataset('forestfires_continuous_univariate')
-
-        self.assertEqual(len(ds.data), 1)
-
-        self.assertEqual(ds.data[0].shape, (1, 1, 517))
-        self.assertEqual(ds.data[0].dtype, torch.float32)
-        should_be = torch.tensor([8.2, 18.0, 14.6, 8.3])
-        self.assertTrue((ds.data[0][0, 0, :4] == should_be).all())
 
 
 class TFBTests(unittest.TestCase):

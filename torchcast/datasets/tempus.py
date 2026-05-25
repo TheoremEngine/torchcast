@@ -35,21 +35,16 @@ COVARIATE_TASKS = [
 
 MULTIVARIATE_TASKS = [
     'baggage_100_multivariate', 'baggage_months_multivariate',
-    'baggage_sales_multivariate', 'batadal_nonstationary_multivariate',
-    'batadal_software_multivariate', 'gold_india_continuous_multivariate',
-    'gold_india_dense_multivariate', 'gold_india_economics_multivariate',
-    'gold_india_real_multivariate', 'goldindia_continuous_multivariate',
-    'goldindia_dense_multivariate', 'goldindia_economics_multivariate',
-    'goldindia_real_multivariate', 'india_gold_days_multivariate',
-    'indiagold_days_multivariate', 'lt_stock_longest_multivariate',
-    'lt_stock_minutes_multivariate', 'ltstock_longest_multivariate',
-    'ltstock_minutes_multivariate', 'madrid_count_multivariate',
+    'baggage_sales_multivariate', 'batadal_software_multivariate',
+    'gold_india_continuous_multivariate', 'gold_india_dense_multivariate',
+    'gold_india_economics_multivariate', 'gold_india_real_multivariate',
+    'india_gold_days_multivariate', 'lt_stock_longest_multivariate',
+    'lt_stock_minutes_multivariate', 'madrid_count_multivariate',
     'madrid_cyclical_multivariate', 'madrid_hours_multivariate',
     'madrid_noisy_multivariate', 'madrid_transport_multivariate',
-    'multivariate_test', 'nyc_covid_healthcare_multivariate',
-    'nyccovid_healthcare_multivariate', 'soil_500_multivariate',
+    'nyc_covid_healthcare_multivariate', 'soil_500_multivariate',
     'soil_nature_multivariate', 'split_smart_energy_multivariate',
-    'splitsmart_energy_multivariate', 'utah_manufacturing_multivariate'
+    'utah_manufacturing_multivariate'
 ]
 
 UNIVARIATE_TASKS = [
@@ -57,21 +52,15 @@ UNIVARIATE_TASKS = [
     'coinbase_days_univariate', 'coinbase_economics_univariate',
     'delhi_climate_univariate', 'electricity_energy_univariate',
     'employees_healthcare_univariate', 'federal_funds_weeks_univariate',
-    'federalfuns_weeks_univariate', 'forest_fires_continuous_univariate',
-    'forestfires_continuous_univariate', 'german_houses_sales_univariate',
-    'german_quarterly_univariate', 'german_quaterly_univariate',
-    'germanhouses_sales_univariate', 'inventories_manufacturing_univariate',
-    'inventories_months_univariate', 'invetories_manufacturing_univariate',
-    'madrid_transport_univariate', 'occupancy_count_univariate',
-    'patient_sparse_univariate', 'pconsumption_years_univariate',
+    'german_houses_sales_univariate', 'german_quarterly_univariate',
+    'german_quaterly_univariate', 'inventories_manufacturing_univariate',
+    'inventories_months_univariate', 'madrid_transport_univariate',
+    'occupancy_count_univariate', 'patient_sparse_univariate',
     'power_consumption_years_univariate', 'retail_categorical_univariate',
     'software_nonstationary_univariate', 'soil_nature_univariate',
-    'sw_job_postings_software_univariate', 'swjobpostings_software_univariate',
-    'synthetic_additive2_univariate', 'synthetic_cyclic_univariate',
-    'synthetic_multiplicative_univariate',
-    'synthetic_multiplticative_univariate',
+    'sw_job_postings_software_univariate', 'synthetic_additive2_univariate',
+    'synthetic_cyclic_univariate', 'synthetic_multiplicative_univariate',
     'synthetic_nonstationary_univariate', 'web_traffic_univariate',
-    'wtraffic_web_univariate'
 ]
 
 DATA_URL = 'https://github.com/Smlcrm/TempusBench/raw/refs/heads/prod/tempus_bench/tasks/{task_type}/{task}/{task}.csv'  # noqa
