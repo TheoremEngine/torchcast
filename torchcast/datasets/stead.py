@@ -49,6 +49,7 @@ class STEADDataset(SeriesDataset):
 
         super().__init__(
             series, labels,
+            metadata=metadata,
             return_length=return_length,
             transform=transform,
         )
