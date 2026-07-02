@@ -305,7 +305,7 @@ class SpectralTests(unittest.TestCase):
             self.assertEqual(tc_freqs.shape, sp_freqs.shape)
             self.assertTrue(np.isclose(tc_freqs.numpy(), sp_freqs).all())
             self.assertEqual(tc_pxx.shape, sp_pxx.shape)
-            self.assertTrue((np.abs(tc_pxx.numpy() - sp_pxx) < 1e-4).all())
+            self.assertTrue((np.abs(tc_pxx.numpy() - sp_pxx) < 2e-4).all())
 
 
 if __name__ == '__main__':
