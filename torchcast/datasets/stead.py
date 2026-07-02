@@ -6,7 +6,6 @@ import h5py
 import torch
 
 from ..data import ListOfArrayLike, Metadata, SeriesDataset
-from ..data.h5_dataset import H5View
 
 
 class STEADDataset(SeriesDataset):

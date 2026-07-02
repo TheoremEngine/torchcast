@@ -1,4 +1,4 @@
-from typing import Iterator, Tuple
+from typing import Iterator
 
 import torch
 import torch.nn.functional as f

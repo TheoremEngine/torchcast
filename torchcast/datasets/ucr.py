@@ -82,7 +82,7 @@ UEA_DATASETS = {
     'BenzeneConcentration_disc': 18498580, 'Blink': 18735667,
     'BoneIntensitiesAgeGroup': 18498586, 'BoneProbAgeGroup': 18498595,
     'ButtonPress': 15522930, 'CharacterTrajectories': 18723007,
-    'CounterMovementJump': 18498603, 'Cricket': 11206185, 
+    'CounterMovementJump': 18498603, 'Cricket': 11206185,
     'CrowdSourced': 18498611, 'DREAMERA': 18498618, 'DREAMERV': 18498620,
     'DuckDuckGeese': 11206189, 'ERing': 11206210, 'EigenWorms': 11206196,
     'EmoPain': 18499143, 'Epilepsy': 11206204,
