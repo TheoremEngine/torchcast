@@ -103,9 +103,6 @@ class MonashTests(unittest.TestCase):
         self.assertTrue(isclose(ds.data[1][0, 0, 0], 9.0))
         self.assertTrue(isclose(ds.data[1][0, 0, -1], 14.0))
 
-    def test_tasks(self):
-        self.assertEqual(len(tc.datasets.MonashArchiveDataset.tasks), 46)
-
 
 class MonsterTests(unittest.TestCase):
     def test_tiselac(self):
@@ -124,9 +121,6 @@ class MonsterTests(unittest.TestCase):
 
         self.assertEqual(ds.data[1].shape, (79446, 1, 1))
         self.assertEqual(ds.data[1].dtype, torch.int64)
-
-    def test_tasks(self):
-        self.assertEqual(len(tc.datasets.MonsterDataset.tasks), 29)
 
 
 class STEADSTests(unittest.TestCase):
@@ -206,9 +200,6 @@ class TempusTests(unittest.TestCase):
         should_be = torch.tensor([8014.0, 8048.7, 8092.3, 8120.5])
         self.assertTrue((ds.data[1][0, 0, :4] == should_be).all())
 
-    def test_tasks(self):
-        self.assertEqual(len(tc.datasets.TempusDataset.tasks), 71)
-
 
 class TFBTests(unittest.TestCase):
     def test_multivariate(self):
@@ -275,9 +266,6 @@ class TFBTests(unittest.TestCase):
         self.assertEqual(ds.metadata[0].name, None)
         self.assertEqual(ds.metadata[0].channel_names[0], 'channel_1')
         self.assertEqual(ds.metadata[0].series_names, None)
-
-    def test_tasks(self):
-        self.assertEqual(len(tc.datasets.TFBDataset.tasks), 8093)
 
 
 class TIMETests(unittest.TestCase):
@@ -378,9 +366,6 @@ class TIMETests(unittest.TestCase):
         self.assertEqual(ds.metadata[1].channel_names[0], 'COP_Brent-Europe')
         self.assertEqual(ds.metadata[1].series_names, ['item0'])
 
-    def test_tasks(self):
-        self.assertEqual(len(tc.datasets.TIMEDataset.tasks), 39)
-
 
 class UCRTests(unittest.TestCase):
     def test_ucr_full_up(self):
@@ -412,10 +397,6 @@ class UCRTests(unittest.TestCase):
         self.assertEqual(ds.metadata[1].name, 'Labels')
         self.assertEqual(ds.metadata[1].channel_names, None)
         self.assertEqual(ds.metadata[1].series_names, None)
-
-    def test_tasks(self):
-        self.assertEqual(len(tc.datasets.UCRDataset.tasks), 128)
-        self.assertEqual(len(tc.datasets.UEADataset.tasks), 133)
 
     def test_uea_full_up(self):
         ds = tc.datasets.UEADataset(
@@ -696,9 +677,6 @@ class UTSDTests(unittest.TestCase):
         self.assertEqual(ds.data[0].dtype, torch.float32)
 
         self.assertTrue(torch.isclose(ds[0][0, :], should_be).all())
-
-    def test_tasks(self):
-        self.assertEqual(len(tc.datasets.UTSDDataset.tasks), 114)
 
 
 def _to_float32(x: float) -> float:

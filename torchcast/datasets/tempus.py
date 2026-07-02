@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
@@ -35,16 +35,16 @@ COVARIATE_TASKS = [
 
 MULTIVARIATE_TASKS = [
     'baggage_100_multivariate', 'baggage_months_multivariate',
-    'baggage_sales_multivariate', 'batadal_software_multivariate',
-    'gold_india_continuous_multivariate', 'gold_india_dense_multivariate',
-    'gold_india_economics_multivariate', 'gold_india_real_multivariate',
-    'india_gold_days_multivariate', 'lt_stock_longest_multivariate',
-    'lt_stock_minutes_multivariate', 'madrid_count_multivariate',
-    'madrid_cyclical_multivariate', 'madrid_hours_multivariate',
-    'madrid_noisy_multivariate', 'madrid_transport_multivariate',
-    'nyc_covid_healthcare_multivariate', 'soil_500_multivariate',
-    'soil_nature_multivariate', 'split_smart_energy_multivariate',
-    'utah_manufacturing_multivariate'
+    'baggage_sales_multivariate', 'batadal_nonstationary_multivariate',
+    'batadal_software_multivariate', 'gold_india_continuous_multivariate',
+    'gold_india_dense_multivariate', 'gold_india_economics_multivariate',
+    'gold_india_real_multivariate', 'india_gold_days_multivariate',
+    'lt_stock_longest_multivariate', 'lt_stock_minutes_multivariate',
+    'madrid_count_multivariate', 'madrid_cyclical_multivariate',
+    'madrid_hours_multivariate', 'madrid_noisy_multivariate',
+    'madrid_transport_multivariate', 'nyc_covid_healthcare_multivariate',
+    'soil_500_multivariate', 'soil_nature_multivariate',
+    'split_smart_energy_multivariate', 'utah_manufacturing_multivariate'
 ]
 
 UNIVARIATE_TASKS = [
@@ -53,13 +53,13 @@ UNIVARIATE_TASKS = [
     'delhi_climate_univariate', 'electricity_energy_univariate',
     'employees_healthcare_univariate', 'federal_funds_weeks_univariate',
     'german_houses_sales_univariate', 'german_quarterly_univariate',
-    'german_quaterly_univariate', 'inventories_manufacturing_univariate',
-    'inventories_months_univariate', 'madrid_transport_univariate',
-    'occupancy_count_univariate', 'patient_sparse_univariate',
-    'power_consumption_years_univariate', 'retail_categorical_univariate',
-    'software_nonstationary_univariate', 'soil_nature_univariate',
-    'sw_job_postings_software_univariate', 'synthetic_additive2_univariate',
-    'synthetic_cyclic_univariate', 'synthetic_multiplicative_univariate',
+    'inventories_manufacturing_univariate', 'inventories_months_univariate',
+    'madrid_transport_univariate', 'occupancy_count_univariate',
+    'patient_sparse_univariate', 'power_consumption_years_univariate',
+    'retail_categorical_univariate', 'software_nonstationary_univariate',
+    'soil_nature_univariate', 'sw_job_postings_software_univariate',
+    'synthetic_additive2_univariate', 'synthetic_cyclic_univariate',
+    'synthetic_multiplicative_univariate',
     'synthetic_nonstationary_univariate', 'web_traffic_univariate',
 ]
 
@@ -72,8 +72,6 @@ class TempusDataset(TensorSeriesDataset):
     found `here<https://github.com/Smlcrm/TempusBench>`__ and  documented by
     `Goktas et al. 2026 <https://arxiv.org/abs/2604.11529>`__.
     '''
-    tasks: List[str] = COVARIATE_TASKS + MULTIVARIATE_TASKS + UNIVARIATE_TASKS
-
     def __init__(self, task: str, path: Optional[str] = None,
                  download: bool = True, transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):
