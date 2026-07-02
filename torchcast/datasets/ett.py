@@ -133,7 +133,8 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
             raise ValueError(split)
 
         if not columns_as_channels:
-            data = data.permute(1, 0, 2)
+            pred = pred.permute(1, 0, 2)
+            target = target.permute(1, 0, 2)
 
         super().__init__(
             dates, pred, target,
