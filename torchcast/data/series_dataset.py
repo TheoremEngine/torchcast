@@ -17,7 +17,7 @@ class Metadata:
     corresponding :class:`Metadata` object. All fields of :class:`Metadata` are
     optional. The fields that may be available are:
 
-     * name: Name of the series.
+     * name: Name of the multiseries.
      * channel_names: A list of the names of each channel.
      * series_names: A list of the names of each series.
     '''
