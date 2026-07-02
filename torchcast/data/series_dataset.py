@@ -167,7 +167,7 @@ class SeriesDataset(torch.utils.data.Dataset):
         ]
 
     @property
-    def shape(self) -> Tuple[int]:
+    def shape(self) -> Tuple[int, int, int]:
         return (
             max(x.shape[0] for x in self.data),
             -1,
