@@ -46,6 +46,34 @@ class AirQualityTest(unittest.TestCase):
         self.assertEqual(ds.metadata[1].series_names, None)
 
 
+class BOOMTests(unittest.TestCase):
+    def test_full_up(self):
+        ds = tc.datasets.BOOMDataset(883)
+
+        self.assertEqual(len(ds.data), 2)
+        self.assertEqual(ds.data[0].shape, (1, 1, 16384))
+        self.assertEqual(ds.data[0].dtype, torch.int64)
+        self.assertEqual(ds.data[1].shape, (1, 1, 16384))
+        self.assertEqual(ds.data[1].dtype, torch.float32)
+
+        row_0 = torch.tensor(
+            [1732928650000000, 1732928651000000, 1732928652000000,
+             1732928653000000, 1732928654000000, 1732928655000000,
+             1732928656000000, 1732928657000000]
+        )
+        self.assertTrue((ds.data[0][0, 0, :8] == row_0).all())
+        self.assertTrue((ds.data[1][0, 0, :8] == -0.0961255133152008).all())
+
+        self.assertTrue(isinstance(ds.metadata, list))
+        self.assertEqual(len(ds.metadata), 2)
+        self.assertEqual(ds.metadata[0].name, 'Datetime')
+        self.assertEqual(ds.metadata[0].channel_names, None)
+        self.assertEqual(ds.metadata[0].series_names, ['883'])
+        self.assertEqual(ds.metadata[1].name, 'Target')
+        self.assertEqual(ds.metadata[1].channel_names, None)
+        self.assertEqual(ds.metadata[1].series_names, ['883'])
+
+
 class MonashTests(unittest.TestCase):
     def test_bitcoin(self):
         # Bitcoin is one of the special cases, since it is multivariate but is

@@ -1,18 +1,8 @@
 import os
 from typing import Callable, List, Optional, Union
 
-import numpy as np
-import torch
-
-from ..data import ListOfTensors, Metadata, TensorSeriesDataset
-from .utils import _create_time_array, _download_and_extract
-
-try:
-    import pyarrow
-except ImportError:
-    has_pyarrow = False
-else:
-    has_pyarrow = True
+from ..data import TensorSeriesDataset
+from .utils import _download_and_extract, _read_hf_arrow_buffer, has_pyarrow
 
 __all__ = ['TIMEDataset']
 
@@ -91,39 +81,10 @@ class TIMEDataset(TensorSeriesDataset):
             path,
             download=download,
         )
-        in_memory_stream = pyarrow.input_stream(buff)
-        opened_stream = pyarrow.ipc.open_stream(in_memory_stream)
-        df = opened_stream.read_all().to_pandas()
-
-        data, ts, series_names = [], [], []
-
-        for _, row in df.iterrows():
-            x = row['target']
-            if x.dtype is np.dtype('O'):
-                x = np.stack([_x for _x in x], axis=0)
-            elif x.ndim == 1:
-                # Need to clone this here because the numpy array has a read-
-                # only flag, which torch does not support.
-                x = x.reshape(1, -1).copy()
-            data.append(torch.from_numpy(x))
-            start_date = row['start'].to_pydatetime()
-            t = _create_time_array(start_date, row['freq'], data[-1].shape[-1])
-            ts.append(torch.from_numpy(t.reshape(1, -1)))
-            series_names.append(row['item_id'])
-
-        if 'variate_names' in df.columns:
-            channel_names = row['variate_names'].tolist()
-        else:
-            channel_names = None
-
-        metadata = [
-            Metadata(name='Datetime', series_names=series_names),
-            Metadata(name='Target', channel_names=channel_names,
-                     series_names=series_names),
-        ]
+        tensors, metadata = _read_hf_arrow_buffer(buff)
 
         super().__init__(
-            ts, data,
+            *tensors,
             return_length=return_length,
             transform=transform,
             metadata=metadata,

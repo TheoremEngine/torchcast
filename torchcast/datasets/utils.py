@@ -14,7 +14,15 @@ import pandas as pd
 import requests
 import torch
 
+from ..data import Metadata
 from ._file_readers import load_ts_file, load_tsf_file
+
+try:
+    import pyarrow
+except ImportError:
+    has_pyarrow = False
+else:
+    has_pyarrow = True
 
 __all__ = ['load_ts_file', 'load_tsf_file']
 
@@ -102,21 +110,26 @@ def _create_time_array(start: datetime, frequency: str, n: int) \
             dtype=np.int64,
         )
     elif frequency.endswith('T'):
+        if frequency == 'T':
+            frequency = '1T'
         start = _timestamp_to_int(pd.Timestamp(start))
         frequency = int(frequency.removesuffix('T'))
         return np.arange(
             start, start + n * frequency * MINUTE_US, frequency * MINUTE_US,
             dtype=np.int64,
         )
-    elif frequency in {'T', '1T'}:
-        start = _timestamp_to_int(pd.Timestamp(start))
-        return np.arange(
-            start, start + n * MINUTE_US, MINUTE_US, dtype=np.int64,
-        )
     elif frequency == '4_seconds':
         start = _timestamp_to_int(pd.Timestamp(start))
         return np.arange(
             start, start + n * 4_000_000, 4_000_000, dtype=np.int64,
+        )
+    elif frequency.endswith('S'):
+        if frequency == 'S':
+            frequency = '1S'
+        start = _timestamp_to_int(pd.Timestamp(start))
+        frequency = int(frequency.removesuffix('S'))
+        return np.arange(
+            start, start + n * 1_000_000, 1_000_000, dtype=np.int64,
         )
     else:
         raise ValueError(f'Did not recognize frequency {frequency}')
@@ -357,6 +370,51 @@ def _fetch_from_remote(url: str) -> BytesIO:
     buff.seek(0)
 
     return buff
+
+
+def _read_hf_arrow_buffer(buff, strptime_format: Optional[str] = None):
+    '''
+    Reads the Arrow file used by HuggingFace for storing time series, returning
+    both the tensors and metadata.
+    '''
+    if not has_pyarrow:
+        raise ImportError('pyarrow not installed')
+
+    in_memory_stream = pyarrow.input_stream(buff)
+    opened_stream = pyarrow.ipc.open_stream(in_memory_stream)
+    df = opened_stream.read_all().to_pandas()
+
+    data, ts, series_names = [], [], []
+
+    for _, row in df.iterrows():
+        x = row['target']
+        if x.dtype is np.dtype('O'):
+            x = np.stack([_x for _x in x], axis=0)
+        elif x.ndim == 1:
+            # Need to clone this here because the numpy array has a read-
+            # only flag, which torch does not support.
+            x = x.reshape(1, -1).copy()
+        data.append(torch.from_numpy(x).float())
+        if strptime_format is None:
+            start_date = row['start'].to_pydatetime()
+        else:
+            start_date = datetime.strptime(row['start'], strptime_format)
+        t = _create_time_array(start_date, row['freq'], data[-1].shape[-1])
+        ts.append(torch.from_numpy(t.reshape(1, -1)))
+        series_names.append(row['item_id'])
+
+    if 'variate_names' in df.columns:
+        channel_names = row['variate_names'].tolist()
+    else:
+        channel_names = None
+
+    metadata = [
+        Metadata(name='Datetime', series_names=series_names),
+        Metadata(name='Target', channel_names=channel_names,
+                 series_names=series_names),
+    ]
+
+    return (ts, data), metadata
 
 
 def _split_ltsf(split: str, input_length: Optional[int],
