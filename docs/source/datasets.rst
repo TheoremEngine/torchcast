@@ -47,6 +47,8 @@ Other Datasets
 
 .. autoclass:: torchcast.datasets.STEADDataset
 
+.. autoclass:: torchcast.datasets.TailedTSDataset
+
 .. autoclass:: torchcast.datasets.TempusDataset
 
 .. autoclass:: torchcast.datasets.TFBDataset
