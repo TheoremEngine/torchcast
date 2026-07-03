@@ -184,12 +184,33 @@ float inline extract_float(const std::string_view& buff,
     }
     else
     {
-        out = std::strtof(buff.begin(), &end);
+        float out;
 
-        if (end != buff.end())
+        // We use std::from_chars instead of std::strtof because that needs to
+        // build a null-terminated string before passing to the underlying C
+        // function, which requires a copy, whereas this works straight from
+        // the view.
+       	auto [ptr, err] = std::from_chars(
+            buff.data(), buff.data() + buff.size(), out
+        );
+
+        if (
+            (ec == std::errc::invalid_argument) ||
+            (ptr != (sv.data() + sv.size()))
+        )
             raise_py_error(
                 PyExc_ValueError,
                 "Cannot convert to float: " + static_cast<std::string>(buff)
+            );
+        else if (ec == std::errc::result_out_of_range)
+            raise_py_error(
+                PyExc_ValueError,
+                "Value out of range: " + static_cast<std::string>(buff)
+            );
+	else if (ec != std::errc{})
+            raise_py_error(
+                PyExc_RuntimeeError,
+                "Unrecognized error: " + static_cast<std::string>(buff)
             );
 
         return out;

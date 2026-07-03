@@ -4,6 +4,16 @@ import time
 import numpy as np
 import torchcast as tc
 
+# Running on Lambda A100:
+#
+# InsectWingbeat_TRAIN.ts
+# Python: 35.1143 sec
+# C++:    1.3633 sec
+#
+# PEMS-SF_TRAIN.ts
+# Python: 27.5412 sec
+# C++:    1.0959 sec
+
 
 def python_load_ts_file(series_file: str):
     '''
