@@ -109,7 +109,7 @@ class UTSDDataset(TensorSeriesDataset):
         )
 
 
-UTSDDataset.tasks = list(chain(*(
+UTSDDataset.tasks = sorted(set(chain(*(
     UTSDDataset._manifest[k]
     for k in ['default', 'UTSD-1G', 'UTSD-2G', 'UTSD-12G']
-)))
+))))
