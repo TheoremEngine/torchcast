@@ -168,6 +168,22 @@ class STEADSTests(unittest.TestCase):
         self.assertEqual(y.item(), 1)
 
 
+class TailedTSTests(unittest.TestCase):
+    def test_sample(self):
+        root = os.path.dirname(__file__)
+        sample_path = os.path.join(root, 'data/tailedts_example.parquet')
+        with open(sample_path, 'rb') as f:
+            blob = f.read()
+
+        with tempfile.TemporaryDirectory() as temp_root:
+            for n in range(1, 13):
+                path = os.path.join(temp_root, f'data-2024{n:02}.parquet')
+                with open(path, 'wb') as f:
+                    f.write(blob)
+
+            ds = tc.datasets.TailedTSDataset(temp_root)
+
+
 class TempusTests(unittest.TestCase):
     def test_covariate(self):
         ds = tc.datasets.TempusDataset('advertising_sales_covariate')
