@@ -1,4 +1,5 @@
 from .air_quality import *
+from .boom import *
 from .electricity import *
 from .ett import *
 from .exchange_rate import *
