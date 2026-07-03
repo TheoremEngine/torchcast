@@ -24,6 +24,8 @@ class UTSDDataset(TensorSeriesDataset):
     This is the `UTSD <https://github.com/thuml/Large-Time-Series-Model>`__
     pre-training dataset, first published in `Liu et al. 2024
     <https://arxiv.org/abs/2402.02368>`__.
+
+    The dataset consists of a single series containing the time series.
     '''
     _manifest = _load_utsd_manifest()
     tasks: List[str]

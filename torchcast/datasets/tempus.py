@@ -71,6 +71,13 @@ class TempusDataset(TensorSeriesDataset):
     This is the Tempus dataset for benchmarking time series foundation models,
     found `here<https://github.com/Smlcrm/TempusBench>`__ and  documented by
     `Goktas et al. 2026 <https://arxiv.org/abs/2604.11529>`__.
+
+    The number of series in the dataset is variable. It may consist of:
+     * A single series containing the data.
+     * A pair of series, the first containing the timestamp and the second the
+       data.
+     * A trio of series: the timestamp, the data, and covariates that are to be
+       used in forecasting the data.
     '''
     def __init__(self, task: str, path: Optional[str] = None,
                  download: bool = True, transform: Optional[Callable] = None,

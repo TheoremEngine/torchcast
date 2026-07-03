@@ -101,6 +101,10 @@ class MonashArchiveDataset(TensorSeriesDataset):
     This provides access to all `Monash forecasting archive
     <https://forecastingdata.org>`__ datasets, as discussed in `Godahewa et al.
     2021 <https://arxiv.org/abs/2105.06643>`__.
+
+    Depending on the task, the dataset consists of either one or two series.
+    The first, optional series consists of timestamps, and the second of the
+    data itself.
     '''
     tasks: List[str] = list(MONASH_ARCHIVE_URLS.keys())
 

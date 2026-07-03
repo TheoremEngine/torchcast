@@ -20,6 +20,9 @@ class ExchangeRateDataset(TensorSeriesDataset):
     of currency exchange rates, taken from:
 
         https://github.com/laiguokun/multivariate-time-series-data
+
+    The dataset consists of two series, the first consisting of timestamps and
+    the second of the data itself.
     '''
     def __init__(self, path: Optional[str] = None, split: str = 'all',
                  download: Union[bool, str] = True, scale: bool = True,

@@ -21,6 +21,9 @@ class SanFranciscoTrafficDataset(TensorSeriesDataset):
     <https://arxiv.org/abs/1703.07015>`, obtained from:
 
         https://pems.dot.ca.gov
+
+    The dataset contains two series, the first being a timestamp and the second
+    the multivariable series to be forecast.
     '''
     def __init__(self, path: Optional[str] = None, split: str = 'all',
                  download: Union[str, bool] = True, scale: bool = True,

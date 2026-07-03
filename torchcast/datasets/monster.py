@@ -28,6 +28,9 @@ class MonsterDataset(TensorSeriesDataset):
     '''
     This is Monster time series classification dataset, first published in
     `Dempster et al. 2025 <https://arxiv.org/abs/2502.15122>`__.
+
+    The dataset consists of two series, the first consisting of the time series
+    and the second of the class labels.
     '''
     tasks: List[str] = MONSTER_TASKS
 

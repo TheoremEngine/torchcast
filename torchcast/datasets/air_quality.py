@@ -17,6 +17,9 @@ class AirQualityDataset(TensorSeriesDataset):
     '''
     This is the `De Vito et al. 2008
     <https://doi.org/10.1016/J.SNB.2007.09.060>`__ air quality dataset.
+
+    The dataset contains two series, the first being a timestamp and the second
+    the multivariable series to be forecast.
     '''
     def __init__(self, path: Optional[str] = None,
                  download: Union[bool, str] = True,

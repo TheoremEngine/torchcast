@@ -25,7 +25,8 @@ class ElectricityLoadDataset(TensorSeriesDataset):
         https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014
 
     But the data has been subsetted and pre-processed. It is sometimes
-    abbreviated as the `ECL` dataset.
+    abbreviated as the `ECL` dataset. The dataset consists of two series, the
+    first consisting of timestamps and the second of the data itself.
     '''
     def __init__(self, path: Optional[str] = None, split: str = 'all',
                  download: Union[str, bool] = True, scale: bool = True,

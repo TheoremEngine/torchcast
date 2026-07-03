@@ -48,6 +48,9 @@ class TFBDataset(TensorSeriesDataset):
 
     This collection includes the LTSF collection as a subset, but the data is
     pre-processed and split in different ways.
+
+    Depending on the task, the data consists of either a single time series, or
+    the timestamp and the time series.
     '''
     tasks: List[str] = _load_tfb_manifest()
 

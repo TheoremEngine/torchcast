@@ -1,4 +1,3 @@
-from functools import lru_cache
 import json
 import os
 from typing import Callable, Dict, List, Optional, Union
@@ -13,7 +12,6 @@ __all__ = ['BOOMDataset']
 BOOM_URL = 'https://huggingface.co/datasets/Datadog/BOOM/resolve/main/ds-{task}-{freq}/data-00000-of-00001.arrow'  # noqa
 
 
-@lru_cache
 def _load_boom_manifest() -> Dict[int, str]:
     path = os.path.join(os.path.dirname(__file__), 'boom.json')
     with open(path, 'r') as tasks_file:
@@ -26,6 +24,9 @@ class BOOMDataset(TensorSeriesDataset):
     time series collected by DataDog from monitoring of pre-production
     environments. More information can be found at `Cohen et al. 2025
     <https://arxiv.org/abs/2505.14766>`__.
+
+    The dataset contains two series, the first being a timestamp and the second
+    the multivariable series to be forecast.
     '''
     _manifest = _load_boom_manifest()
 

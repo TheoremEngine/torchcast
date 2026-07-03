@@ -9,6 +9,21 @@ from ..data import ListOfArrayLike, Metadata, SeriesDataset
 
 
 class STEADDataset(SeriesDataset):
+    '''
+    This is the STanford EArthquake Dataset, consisting of seismic signals to
+    be classified as earthquake or not-earthquake. More information can be
+    found at:
+
+        Mousavi et al. 2019. ``STanford EArthquake Dataset (STEAD): A Global
+        Data Set of Seismic Signals for AI.'' *IEEE Access*, vol. 7, pp.
+        179464-179476. `Link <https://ieeexplore.ieee.org/document/8871127>`__
+
+    The dataset must be downloaded manually from:
+
+        https://github.com/smousavi05/STEAD
+
+    The data consists of two series: the waveform itself and the class label.
+    '''
     def __init__(self, paths: Union[str, Iterable[str]],
                  transform: Optional[Callable] = None,
                  return_length: Optional[int] = None):

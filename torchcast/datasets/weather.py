@@ -28,6 +28,9 @@ class GermanWeatherDataset(TensorSeriesDataset):
     This dataset was first used in time series forecasting in `Zeng et al. 2022
     <https://arxiv.org/abs/2205.13504>`__, which used only the data from
     Beutenberg in 2020.
+
+    The dataset contains two series, the first being a timestamp and the second
+    the multivariable series to be forecast.
     '''
     def __init__(self, path: Optional[str] = None,
                  year: Union[int, Iterable[int]] = 2020,

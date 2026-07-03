@@ -25,6 +25,9 @@ class LargeSTDataset(TensorSeriesDataset):
         https://www.kaggle.com/datasets/liuxu77/largest
 
     And unzipped.
+
+    The dataset consists of two series, the first consisting of timestamps and
+    the second of the data itself.
     '''
     tasks: List[str] = ['ca', 'gba', 'gla', 'sd']
 

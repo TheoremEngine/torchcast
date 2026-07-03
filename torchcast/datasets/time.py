@@ -35,6 +35,9 @@ class TIMEDataset(TensorSeriesDataset):
     This is TIME time series forecasting dataset, first published in
     `Qiao et al. 2026 <https://arxiv.org/abs/2602.12147>`__. It is intended for
     evaluating time series foundation models, and so has no train split.
+
+    The dataset contains two series, the first being a timestamp and the second
+    the multivariable series to be forecast.
     '''
     tasks: List[str] = list(TIME_TASKS.keys())
 

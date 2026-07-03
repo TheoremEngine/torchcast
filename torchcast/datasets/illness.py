@@ -22,6 +22,9 @@ class ILIDataset(TensorSeriesDataset):
 
     To download this dataset, click "Download Data". Unselect "WHO/NREVSS" and
     select the desired seasons, then click "Download Data".
+
+    The dataset consists of two series, the first consisting of timestamps and
+    the second of the data itself.
     '''
     def __init__(self, path: str, split: str = 'all', scale: bool = True,
                  columns_as_channels: bool = True,

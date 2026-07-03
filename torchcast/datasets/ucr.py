@@ -143,6 +143,8 @@ class UCRDataset(TensorSeriesDataset):
 
         https://www.timeseriesclassification.com/
 
+    The dataset consists of two series, the first consisting of the time series
+    itself and the second of the label to be predicted.
     '''
     tasks: List[str] = list(UCR_DATASETS.keys())
 
@@ -206,6 +208,9 @@ class UEADataset(TensorSeriesDataset):
         Middlehurst et al. 2026. ``The Multiverse of Time Series Machine
         Learning: an Archive for Multivariate Time Series Classification.''
         `arXiv: 2603.20352. <https://arxiv.org/abs/2603.20352>`__
+
+    The dataset consists of two series, the first consisting of the time series
+    itself and the second of the label to be predicted.
     '''
     tasks: List[str] = list(UEA_DATASETS.keys())
 

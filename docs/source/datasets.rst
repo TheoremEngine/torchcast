@@ -39,6 +39,18 @@ Other Datasets
 
 .. autoclass:: torchcast.datasets.AirQualityDataset
 
+.. autoclass:: torchcast.datasets.BOOMDataset
+
 .. autoclass:: torchcast.datasets.LargeSTDataset
 
+.. autoclass:: torchcast.datasets.MonsterDataset
+
+.. autoclass:: torchcast.datasets.STEADDataset
+
+.. autoclass:: torchcast.datasets.TempusDataset
+
 .. autoclass:: torchcast.datasets.TFBDataset
+
+.. autoclass:: torchcast.datasets.TIMEDataset
+
+.. autoclass:: torchcast.datasets.UTSDDataset

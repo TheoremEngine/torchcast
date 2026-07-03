@@ -44,6 +44,9 @@ class ElectricityTransformerDataset(TensorSeriesDataset):
         https://github.com/zhouhaoyi/ETDataset
 
     This is sometimes abbreviated as the `ETT` dataset.
+
+    The dataset contains three series: a timestamp, the time series itself, and
+    a series of covariate variables.
     '''
     def __init__(self, path: Optional[str] = None, task: str = '15min',
                  split: str = 'all', download: Union[bool, str] = True,
