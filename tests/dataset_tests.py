@@ -649,6 +649,128 @@ class UtilsTests(unittest.TestCase):
             [datetime(2010, 1, 1, 0, 0, 0), datetime(2010, 1, 2, 0, 0, 0)]
         )
 
+    def test_parse_ts_file_1(self):
+        path = os.path.join(os.path.dirname(__file__), 'data/example_1.ts')
+        with open(path, 'r') as f:
+            buff = f.read()
+        series, attrs = tc.datasets.utils.parse_ts(buff)
+
+        self.assertTrue(isinstance(series, list))
+        self.assertEqual(len(attrs), 4)
+
+        should_be = [
+            np.array([[1., 2., 3., 4.], [5., 6., 7., 8.]]),
+            np.array([[9., 10., 11., 12.], [13., 14., 15., 16.]])
+        ]
+        for i in [0, 1]:
+            self.assertEqual(series[i].shape, (2, 4))
+            self.assertTrue((series[i] == should_be[i]).all())
+
+        self.assertEqual(
+            attrs.keys(),
+            {'problemName', 'univariate', 'classLabel', 'labels'},
+        )
+        self.assertEqual(attrs['problemName'], 'Wowza')
+        self.assertEqual(attrs['univariate'], False)
+        self.assertEqual(attrs['classLabel'], ['a', 'b', 'c'])
+        self.assertTrue(isinstance(attrs['labels'], np.ndarray))
+        self.assertTrue((attrs['labels'] == np.array([0, 1])).all())
+
+    def test_parse_ts_file_2(self):
+        path = os.path.join(os.path.dirname(__file__), 'data/example_2.ts')
+        with open(path, 'r') as f:
+            buff = f.read()
+        series, attrs = tc.datasets.utils.parse_ts(buff)
+
+        self.assertEqual(series.shape, (2, 2, 4))
+        self.assertEqual(len(attrs), 4)
+
+        self.assertTrue(isnan(series[0, 0, 0]))
+        self.assertTrue(isnan(series[0, 0, 1]))
+        self.assertEqual(series[0, 0, 2], 5.)
+        self.assertEqual(series[0, 0, 3], 1.)
+        self.assertEqual(series[0, 1, 0], 0.)
+        self.assertEqual(series[0, 1, 1], 1.)
+        self.assertTrue(isnan(series[0, 1, 2]))
+        self.assertTrue(isnan(series[0, 1, 3]))
+        self.assertTrue(isnan(series[1, 0, 0]))
+        self.assertEqual(series[1, 0, 1], 2.)
+        self.assertTrue(np.isnan(series[1, 0, 2:]).all())
+        self.assertTrue(np.isnan(series[1, 1, :]).all())
+
+        self.assertEqual(
+            attrs.keys(),
+            {'problemName', 'seriesLength', 'classLabel', 'timeStamps'},
+        )
+        self.assertEqual(attrs['problemName'], 'Wowza')
+        self.assertEqual(attrs['classLabel'], False)
+        self.assertEqual(attrs['seriesLength'], 4)
+
+    def test_parse_tsf_file_1(self):
+        path = os.path.join(os.path.dirname(__file__), 'data/example_1.tsf')
+        with open(path, 'r') as f:
+            buff = f.read()
+        series, attrs = tc.datasets.utils.parse_tsf(buff)
+
+        self.assertEqual(series.shape, (2, 1, 4))
+        self.assertEqual(len(attrs), 7)
+
+        should_be = np.array([
+            [1., 2., 3., 4.],
+            [5., 6., 7., 8.]
+        ])
+        should_be = should_be.reshape(2, 1, 4)
+        self.assertTrue((series == should_be).all(), series)
+
+        self.assertEqual(
+            attrs.keys(),
+            {'str', 'num', 'dat', 'horizon', 'frequency', 'missing',
+             'equallength'}
+        )
+        self.assertEqual(attrs['horizon'], 4)
+        self.assertEqual(attrs['missing'], True)
+        self.assertEqual(attrs['equallength'], True)
+        self.assertEqual(attrs['frequency'], '12')
+        self.assertEqual(attrs['str'], ['a', 'b'])
+        self.assertTrue(isinstance(attrs['num'], np.ndarray))
+        self.assertTrue((attrs['num'] == np.array([1, 2])).all())
+        self.assertEqual(
+            attrs['dat'],
+            [datetime(2010, 1, 1, 0, 0, 0), datetime(2010, 1, 2, 0, 0, 0)]
+        )
+
+    def test_parse_tsf_file_2(self):
+        path = os.path.join(os.path.dirname(__file__), 'data/example_2.tsf')
+        with open(path, 'r') as f:
+            buff = f.read()
+        series, attrs = tc.datasets.utils.parse_tsf(buff)
+
+        self.assertEqual(len(series), 2)
+        self.assertEqual(len(attrs), 7)
+
+        self.assertEqual(series[0].shape, (1, 4,))
+        self.assertTrue(isnan(series[0][0, 0]))
+        self.assertTrue((series[0][0, 1:] == np.array([2., 3., 4.])).all())
+        self.assertEqual(series[1].shape, (1, 3,))
+        self.assertTrue((series[1][0, :] == np.array([5., 6., 7.])).all())
+
+        self.assertEqual(
+            attrs.keys(),
+            {'str', 'num', 'dat', 'horizon', 'frequency', 'missing',
+             'equallength'}
+        )
+        self.assertEqual(attrs['horizon'], 4)
+        self.assertEqual(attrs['missing'], True)
+        self.assertEqual(attrs['equallength'], False)
+        self.assertEqual(attrs['frequency'], '12')
+        self.assertEqual(attrs['str'], ['a', 'b'])
+        self.assertTrue(isinstance(attrs['num'], np.ndarray))
+        self.assertTrue((attrs['num'] == np.array([1, 2])).all())
+        self.assertEqual(
+            attrs['dat'],
+            [datetime(2010, 1, 1, 0, 0, 0), datetime(2010, 1, 2, 0, 0, 0)]
+        )
+
 
 class UTSDTests(unittest.TestCase):
     def test_fetch(self):

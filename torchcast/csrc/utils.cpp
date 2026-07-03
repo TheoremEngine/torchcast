@@ -206,6 +206,7 @@ void parse_header(std::istream& reader, py::dict& rtn,
                 HeaderType value_type { std::get<1>(allowed_keys[i]) };
                 // For convenience, crop buff_view down to just the value.
                 buff_view = buff_view.substr(key.length() + 1);
+		buff_view = strip_whitespace(buff_view);
 
                 // Check for duplicate keys.
                 if (rtn.contains(key))

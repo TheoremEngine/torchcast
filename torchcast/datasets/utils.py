@@ -15,7 +15,7 @@ import requests
 import torch
 
 from ..data import Metadata
-from ._file_readers import load_ts_file, load_tsf_file
+from ._file_readers import load_ts_file, load_tsf_file, parse_ts, parse_tsf
 
 try:
     import pyarrow

@@ -4,7 +4,7 @@
 
  @problemName Wowza
    
-  @univariate false
+  @univariate  false
 
   @classLabel true a b c
 
