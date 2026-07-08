@@ -38,6 +38,7 @@ class SeriesTest(unittest.TestCase):
             torch.empty((3, 4)),
             torch.empty((3, 5)),
         ])]
+        ds._build_index()
         self.assertEqual(ds._find_i_t(0), (0, 0))
         self.assertEqual(ds._find_i_t(1), (0, 1))
         self.assertEqual(ds._find_i_t(2), (0, 2))
@@ -55,6 +56,7 @@ class SeriesTest(unittest.TestCase):
             torch.empty((3, 2)),
             torch.empty((3, 5)),
         ])]
+        ds._build_index()
         self.assertEqual(ds._find_i_t(0), (0, 0))
         self.assertEqual(ds._find_i_t(1), (0, 1))
         self.assertEqual(ds._find_i_t(2), (0, 2))
@@ -64,20 +66,34 @@ class SeriesTest(unittest.TestCase):
             ds._find_i_t(5)
         self.assertEqual(len(ds), 5)
 
-    def test_time_ranges(self):
-        ds = tc.data.SeriesDataset()
+    def test_index_range(self):
+        ds = tc.data.SeriesDataset(return_length=2)
         ds.data = [
             tc.data.ListOfTensors([
-                torch.empty((2, 4)), torch.empty((2, 5))
+                torch.empty((2, 4)), torch.empty((2, 7))
             ]),
             torch.empty((2, 3, 1))
         ]
-        self.assertEqual(ds._time_ranges, [4, 5])
+        ds._build_index()
+        should_be = torch.tensor([0, 3, 9])
+        self.assertTrue((ds._index_range == should_be).all())
+
+        ds.return_length = 5
+        ds._build_index()
+        should_be = torch.tensor([0, 0, 3])
+        self.assertTrue((ds._index_range == should_be).all())
+
+        ds.return_length = None
+        ds._build_index()
+        self.assertTrue(ds._index_range is None)
+
+        ds.return_length = 2
         ds.data = [
             torch.empty((2, 2, 5)),
             torch.empty((2, 3, 1))
         ]
-        self.assertEqual(ds._time_ranges, [5, 5])
+        ds._build_index()
+        self.assertTrue(ds._index_range is None)
 
     def test_shape(self):
         ds = tc.data.SeriesDataset()
@@ -105,7 +121,7 @@ class TensorSeriesTest(unittest.TestCase):
             data['a'], data['c'], return_length=2
         )
         self.assertEqual(len(ds), 4)
-        self.assertEqual(ds._time_ranges, [3, 3])
+        self.assertTrue(ds._index_range is None)
         self.assertEqual(ds.shape, (2, -1, 3))
 
         a, c = ds[0]
@@ -153,7 +169,8 @@ class TensorSeriesTest(unittest.TestCase):
             data['a'], data['c'], return_length=2
         )
         self.assertEqual(len(ds), 3)
-        self.assertEqual(ds._time_ranges, [3, 2])
+        _index_range = torch.tensor([0, 2, 3])
+        self.assertTrue((ds._index_range == _index_range).all())
         self.assertEqual(ds.shape, (2, -1, 3))
 
         a, c = ds[0]
@@ -190,7 +207,7 @@ class TensorSeriesTest(unittest.TestCase):
         }
         ds = tc.data.TensorSeriesDataset(data['a'], data['c'])
         self.assertEqual(len(ds), 2)
-        self.assertEqual(ds._time_ranges, [3, 3])
+        self.assertTrue(ds._index_range is None)
         self.assertEqual(ds.shape, (2, -1, 3))
 
         a, c = ds[0]
@@ -220,7 +237,7 @@ class TensorSeriesTest(unittest.TestCase):
         }
         ds = tc.data.TensorSeriesDataset(data['a'], data['c'])
         self.assertEqual(len(ds), 2)
-        self.assertEqual(ds._time_ranges, [3, 2])
+        self.assertTrue(ds._index_range is None)
         self.assertEqual(ds.shape, (2, -1, 3))
 
         a, c = ds[0]
@@ -376,7 +393,7 @@ class H5SeriesTest(unittest.TestCase):
             ds = tc.data.H5SeriesDataset(path, ('c', 'a'), return_length=2)
             self.assertIs(ds.metadata, None)
             self.assertEqual(len(ds), 4)
-            self.assertEqual(ds._time_ranges, [3, 3])
+            self.assertTrue(ds._index_range is None)
             self.assertEqual(ds.shape, (2, -1, 3))
 
             c, a = ds[0]
@@ -425,7 +442,7 @@ class H5SeriesTest(unittest.TestCase):
             ds = tc.data.H5SeriesDataset(path, ('c', 'a'))
             self.assertIs(ds.metadata, None)
             self.assertEqual(len(ds), 2)
-            self.assertEqual(ds._time_ranges, [3, 3])
+            self.assertTrue(ds._index_range is None)
             self.assertEqual(ds.shape, (2, -1, 3))
 
             c, a = ds[0]

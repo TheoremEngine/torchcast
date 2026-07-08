@@ -4,7 +4,7 @@ from typing import Callable, List, Optional, Tuple, Union
 import numpy as np
 import torch
 
-from .utils import ArrayLike
+from .utils import ArrayLike, ListOfArrayLike
 
 __all__ = ['Metadata', 'SeriesDataset']
 
@@ -74,6 +74,7 @@ class SeriesDataset(torch.utils.data.Dataset):
         self.data = self._coerce_inputs(*data)
         self.transform = transform
         self.return_length = return_length
+
         if metadata is not None:
             if isinstance(metadata, Metadata):
                 metadata = [metadata]
@@ -86,6 +87,8 @@ class SeriesDataset(torch.utils.data.Dataset):
                 if md is not None:
                     md.check_consistency(ms)
         self.metadata = metadata
+
+        self._build_index()
 
     def __getitem__(self, idx: int):
         if isinstance(idx, torch.Tensor):
@@ -120,11 +123,30 @@ class SeriesDataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         if self.return_length is None:
             return self.shape[0]
+        elif self._index_range is None:
+            return self.shape[0] * (self.shape[2] + 1 - self.return_length)
         else:
-            return sum(
-                max(t_r + 1 - self.return_length, 0)
-                for t_r in self._time_ranges
-            )
+            return self._index_range[-1].item()
+
+    def _build_index(self):
+        '''
+        If any of the data are :class:`ListOfArrayLike`, builds an index that
+        will be used to rapidly look up the row and time for an entry later.
+        '''
+        self._index_range = None
+        if self.return_length is None:
+            return
+        for x in self.data:
+            if isinstance(x, ListOfArrayLike):
+                # Prepend with zero to make the cumulative sum later accurate.
+                _lengths = torch.tensor([0] + [_x.shape[-1] for _x in x])
+                # Reduce lengths by (return_length - 1).
+                _lengths -= (self.return_length - 1)
+                # Clamp to 0.
+                _lengths.clip_(min=0)
+                # Cumulative sum to build the index.
+                self._index_range = _lengths.cumsum(0)
+                return
 
     @staticmethod
     def _coerce_inputs(*data: ArrayLike):
@@ -148,23 +170,17 @@ class SeriesDataset(torch.utils.data.Dataset):
     def _find_i_t(self, idx: int) -> Tuple[int, int]:
         '''
         Convenience function to convert a flat index to the appropriate indexes
-        of the sequence and time.
+        of the sequence and time. This method assumes return_length is not
+        None.
         '''
-        t = idx
-        for i, max_t in enumerate(self._time_ranges):
-            if t <= (max_t - self.return_length):
-                break
-            t -= max(max_t + 1 - self.return_length, 0)
-        else:
+        if (idx < 0) or (idx >= len(self)):
             raise IndexError(idx)
-        return i, t
-
-    @property
-    def _time_ranges(self) -> List[int]:
-        return [
-            max(x[i if x.shape[0] > 1 else 0].shape[1] for x in self.data)
-            for i in range(self.shape[0])
-        ]
+        if self._index_range is not None:
+            i = np.searchsorted(self._index_range.numpy(), idx, side='right').item() - 1
+            return (i, idx - self._index_range[i].item())
+        else:
+            t_per_row = self.shape[2] - self.return_length + 1
+            return (idx // t_per_row), (idx % t_per_row)
 
     @property
     def shape(self) -> Tuple[int, int, int]:
