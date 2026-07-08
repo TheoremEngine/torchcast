@@ -9,7 +9,8 @@ OneOrMoreDims = Union[int, Iterable[int]]
 
 def _ensure_nct(series: torch.Tensor, time_dim: int = -1,
                 batch_dim: Optional[OneOrMoreDims] = None,
-                keepdim: bool = False) -> (torch.Tensor, Callable):
+                keepdim: bool = False, allow_time_changes: bool = False) \
+        -> (torch.Tensor, Callable):
     '''
     Given an input series, permutes and rearranges it to ensure it is in NCT
     arrangement. Returns the series as a :class:`torch.Tensor`, along with a
@@ -31,6 +32,8 @@ def _ensure_nct(series: torch.Tensor, time_dim: int = -1,
         dimension.
         keepdim (bool): Modify the function so that the restore_shape function
         preserves the batch dimensions as 1s.
+        allow_time_changes (bool): Modify the function so that the
+        restore_shape function allows the time dimension to change.
     '''
     if not isinstance(series, torch.Tensor):
         raise TypeError(series)
@@ -54,10 +57,12 @@ def _ensure_nct(series: torch.Tensor, time_dim: int = -1,
 
     idx_permute = (*batch_dim, *channel_dims, time_dim)
 
-    rtn_shape = tuple(
+    rtn_shape = [
         1 if d in batch_dim else series.shape[d]
         for d in idx_permute
-    )
+    ]
+    if allow_time_changes:
+        rtn_shape[-1] = -1
     rtn_permute = tuple(idx_permute.index(d) for d in range(series.ndim))
 
     series = series.permute(*idx_permute).reshape(N, C, T)

@@ -185,6 +185,18 @@ class AutoCovTests(unittest.TestCase):
         )
 
 
+class ConvTests(unittest.TestCase):
+    def test_moving_average(self):
+        x = torch.arange(10).view(1, 1, -1)
+        ma_x = tc.utils.moving_average(x, 2)
+
+        self.assertEqual(ma_x.shape, (1, 1, 9))
+        self.assertTrue((ma_x == (x[:, :, :-1] + 0.5)).all())
+
+        ma_x = tc.utils.moving_average(x, (4, 2))
+        self.assertEqual(ma_x.shape, (1, 1, 6))
+
+
 class ShapingTests(unittest.TestCase):
     def test_ensure_nct_series(self):
         orig_x = torch.arange(6.).view(1, 2, 3)
@@ -206,6 +218,46 @@ class ShapingTests(unittest.TestCase):
         C_1, N_1, T, N_2, C_2 = 2, 3, 11, 5, 7
         orig_x = torch.randn((C_1, N_1, T, N_2, C_2))
         x, reshape = tc.utils._shaping._ensure_nct(orig_x, 2, batch_dim=(1, 3))
+        self.assertEqual(x.shape, (N_1 * N_2, C_1 * C_2, T))
+        rtn_x = reshape(x.mean(0))
+        self.assertEqual(rtn_x.shape, (C_1, T, C_2))
+        self.assertTrue(
+            torch.isclose(orig_x.mean((1, 3)), rtn_x, atol=1e-6).all(),
+            (orig_x.mean((1, 3)), rtn_x)
+        )
+
+        with self.assertRaises(RuntimeError):
+            reshape(x[:, :, :10])
+
+    def test_ensure_nct_series_allow_time_change(self):
+        orig_x = torch.arange(6.).view(1, 2, 3)
+        x, reshape = tc.utils._shaping._ensure_nct(
+            orig_x, -1, allow_time_changes=True
+        )
+        self.assertEqual(x.shape, (1, 2, 3))
+        rtn_x = reshape(x)
+        self.assertEqual(rtn_x.shape, (1, 2, 3))
+        self.assertTrue((rtn_x == orig_x.squeeze(0)).all())
+
+        # Input tensor has arrangement (C_1, T, C_2)
+        orig_x = torch.randn((3, 5, 2))
+        x, reshape = tc.utils._shaping._ensure_nct(
+            orig_x, 1, allow_time_changes=True
+        )
+        self.assertEqual(x.shape, (1, 6, 5))
+        rtn_x = reshape(x[0])
+        self.assertEqual(rtn_x.shape, (3, 5, 2))
+        self.assertTrue((orig_x == rtn_x).all())
+
+        rtn_x = reshape(x[:, :, :4])
+        self.assertEqual(rtn_x.shape, (3, 4, 2))
+
+        # Input tensor has the arrangement (C_1, N_1, T, N_2, C_2).
+        C_1, N_1, T, N_2, C_2 = 2, 3, 11, 5, 7
+        orig_x = torch.randn((C_1, N_1, T, N_2, C_2))
+        x, reshape = tc.utils._shaping._ensure_nct(
+            orig_x, 2, batch_dim=(1, 3), allow_time_changes=True
+        )
         self.assertEqual(x.shape, (N_1 * N_2, C_1 * C_2, T))
         rtn_x = reshape(x.mean(0))
         self.assertEqual(rtn_x.shape, (C_1, T, C_2))
