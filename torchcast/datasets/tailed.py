@@ -45,6 +45,10 @@ class TailedTSDataset(TensorSeriesDataset):
 
         value_columns = sorted(c for c in df.columns if c.startswith('count_'))
         values = df[value_columns].values
+        # We are about to discard the df wrapper, so the fact that pandas
+        # expects this array to be immutable does not matter, and this
+        # suppresses a warning that would otherwise occur.
+        values.setflags(write=True)
         values = torch.from_numpy(values).float().unsqueeze(1)
 
         metadata = [Metadata(series_names=df['page_title'].tolist())]
