@@ -169,9 +169,6 @@ float inline extract_float(const std::string_view& buff,
     //     extract the integer from.
     //     allow_missing (const bool&): Whether to allow missing values.
 
-    char* end;
-    float out;
-
     if (buff == "?")
     {
         if (!allow_missing)
@@ -195,21 +192,21 @@ float inline extract_float(const std::string_view& buff,
         );
 
         if (
-            (ec == std::errc::invalid_argument) ||
-            (ptr != (sv.data() + sv.size()))
+            (err == std::errc::invalid_argument) ||
+            (ptr != (buff.data() + buff.size()))
         )
             raise_py_error(
                 PyExc_ValueError,
                 "Cannot convert to float: " + static_cast<std::string>(buff)
             );
-        else if (ec == std::errc::result_out_of_range)
+        else if (err == std::errc::result_out_of_range)
             raise_py_error(
                 PyExc_ValueError,
                 "Value out of range: " + static_cast<std::string>(buff)
             );
-	else if (ec != std::errc{})
+	else if (err != std::errc{})
             raise_py_error(
-                PyExc_RuntimeeError,
+                PyExc_RuntimeError,
                 "Unrecognized error: " + static_cast<std::string>(buff)
             );
 

@@ -124,7 +124,7 @@ py::object parse_ts_body_sparse(std::istream& reader, const bool has_classes,
             size_t row_begin { series.size() };
 
             // For each channel, create the entries in series, filled with
-            // NaNs.
+            // NaNs. Tried pre-allocating this but it didn't help.
             for(size_t t = 0; t < n_t; t++)
                 series.push_back(NAN);
 
