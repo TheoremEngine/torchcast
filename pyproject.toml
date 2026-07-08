@@ -15,8 +15,17 @@ classifiers = [
     "Operating System :: OS Independent",
     "License :: OSI Approved :: MIT License",
 ]
+dependencies = [
+    'h5py',
+    'pandas',
+    'pybind11',
+    'requests',
+    'torch',
+]
 
 [project.urls]
 Homepage = "https://github.com/TheoremEngine/torchcast"
 Issues = "https://github.com/TheoremEngine/torchcast/issues"
 
+[tool.setuptools.package-data]
+"torchcast" = ['datasets/*.txt', 'datasets/*.json']

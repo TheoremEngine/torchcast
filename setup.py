@@ -1,4 +1,4 @@
-from setuptools import find_packages, setup
+from setuptools import setup
 
 from pybind11.setup_helpers import Pybind11Extension
 
@@ -6,14 +6,6 @@ COMPILE_ARGS = [
     '-Wall',
     '-Wextra',
     '-Wsign-conversion',
-]
-
-REQUIREMENTS = [
-    'h5py',
-    'pandas',
-    'pybind11',
-    'requests',
-    'torch',
 ]
 
 
@@ -30,14 +22,4 @@ if __name__ == '__main__':
             extra_compile_args=COMPILE_ARGS,
         ),
     ]
-
-    setup(
-        name='torchcast',
-        version='0.1',
-        author='Mark Lowell',
-        author_email='MarkLowell@theorem-engine.org',
-        packages=find_packages(),
-        package_data={'torchcast': ['datasets/*.txt', 'datasets/*.json']},
-        install_requires=REQUIREMENTS,
-        ext_modules=ext_modules,
-    )
+    setup(ext_modules=ext_modules)
